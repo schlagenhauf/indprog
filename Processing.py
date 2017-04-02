@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import struct
 
 
 class ProcessingGraph:
@@ -47,11 +48,17 @@ class ProcessingGraph:
 ##
 # @brief A node bundles a process with input and output ports.
 class ProcessingNode:
-    def __init__(self, name, inPorts = [], outPorts = []):
+    def __init__(self, name, processType, inPorts = [], outPorts = []):
         self.name = name
         self.inputPorts = [Port(self, ip) for ip in inPorts]
         self.outputPorts = [Port(self, op) for op in outPorts]
-        self.proc = Process(name)
+        if processType == "":
+            self.proc = Process(name)
+        elif processType == "const":
+            self.proc = ConstantProcess(name)
+        elif processType == "add":
+            self.proc = AdditionProcess(name)
+
 
     def process(self):
         print('Node ' + self.name + ':')
@@ -81,6 +88,14 @@ class Process:
     def __init__(self, name):
         self.name = name
 
+    ##
+    # @brief Returns the port specifications of this process so that the containing node
+    # can create them
+    #
+    # @return List of port specifications
+    def getPortSpecs(self):
+        pass
+
     def run(self, inFds, outFds):
         str = ""
         for i in inFds:
@@ -91,7 +106,7 @@ class Process:
 
         str += self.name
 
-        print(str)
+        print('\t' + str)
 
         for o in outFds:
             oop = open(o, 'w')
@@ -99,27 +114,46 @@ class Process:
                 oop.write(str)
                 oop.close()
 
-        #print(inFds)
-        #print(outFds)
-        #print('\tDummy Process...')
 
-
-class ArithmeticProcess(Process):
-    def __init__(self, procType):
-        self.procType = procType
+class ConstantProcess(Process):
+    def __init__(self, name):
+        super(ConstantProcess, self).__init__(name)
+        self.constant = 4
 
     def run(self, inFds, outFds):
-        if self.procType == "add":
-           outdata.append([inFd[0] + inFd[1]])
+        for o in outFds:
+            oop = open(o, 'w')
+            if oop:
+                oop.write(struct.pack('f',self.constant).decode('ascii') + '\n')
+                oop.close()
+
+
+class AdditionProcess(Process):
+    def __init__(self, name):
+        super(AdditionProcess, self).__init__(name)
+
+    def run(self, inFds, outFds):
+        valSum = 0
+        for i in inFds:
+            iop = open(i, 'r')
+            if iop:
+                valSum += struct.unpack('f', iop.readline())
+                iop.close()
+
+        for o in outFds:
+            oop = open(o, 'w')
+            if oop:
+                oop.write(struct.pack('f',valSum).decode('ascii') + '\n')
+                oop.close()
 
 
 
 if __name__ == '__main__':
     graph = ProcessingGraph()
-    node1 = ProcessingNode("node1", ["in"], ["out"])
-    node2 = ProcessingNode("node2", ["in1", "in2"], [])
-    node3 = ProcessingNode("node3", [], ["out"])
-    node4 = ProcessingNode("node4", [], ["out"])
+    node1 = ProcessingNode("node1", "", ["in"], ["out"])
+    node2 = ProcessingNode("node2", "add", ["in1", "in2"], [])
+    node3 = ProcessingNode("node3", "const", [], ["out"])
+    node4 = ProcessingNode("node4", "const", [], ["out"])
     graph.addNode(node1)
     graph.addNode(node2)
     graph.addNode(node3)
