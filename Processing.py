@@ -58,6 +58,8 @@ class ProcessingNode:
             self.proc = ConstantProcess(name)
         elif processType == "add":
             self.proc = AdditionProcess(name)
+        elif processType == "print":
+            self.proc = PrinterProcess(name)
 
 
     def process(self):
@@ -106,13 +108,29 @@ class Process:
 
         str += self.name
 
-        print('\t' + str)
+        #print('\t' + str)
 
         for o in outFds:
             oop = open(o, 'w')
             if oop:
                 oop.write(str)
                 oop.close()
+
+
+class PrinterProcess(Process):
+    def __init__(self, name):
+        super(PrinterProcess, self).__init__(name)
+
+
+    def run(self, inFds, outFds):
+        for  i in inFds:
+            oip = open(i, 'r')
+            if oip:
+                while True:
+                    line = oip.readline()
+                    if not line:
+                        break
+                    print(name + ': ' + line)
 
 
 class ConstantProcess(Process):
@@ -124,7 +142,8 @@ class ConstantProcess(Process):
         for o in outFds:
             oop = open(o, 'w')
             if oop:
-                oop.write(struct.pack('f',self.constant).decode('ascii') + '\n')
+                data = "".join(map(chr,struct.pack('f',self.constant))) + '\n'
+                oop.write(data)
                 oop.close()
 
 
@@ -143,7 +162,8 @@ class AdditionProcess(Process):
         for o in outFds:
             oop = open(o, 'w')
             if oop:
-                oop.write(struct.pack('f',valSum).decode('ascii') + '\n')
+                data = "".join(map(chr,struct.pack('f',valSum))) + '\n'
+                oop.write(data)
                 oop.close()
 
 
@@ -151,14 +171,17 @@ class AdditionProcess(Process):
 if __name__ == '__main__':
     graph = ProcessingGraph()
     node1 = ProcessingNode("node1", "", ["in"], ["out"])
-    node2 = ProcessingNode("node2", "add", ["in1", "in2"], [])
+    node2 = ProcessingNode("node2", "add", ["in1", "in2"], ["out"])
     node3 = ProcessingNode("node3", "const", [], ["out"])
     node4 = ProcessingNode("node4", "const", [], ["out"])
+    node5 = ProcessingNode("node5", "print", ["in"], [])
     graph.addNode(node1)
     graph.addNode(node2)
     graph.addNode(node3)
     graph.addNode(node4)
+    graph.addNode(node5)
     graph.connectPorts(node1.outputPorts[0], node2.inputPorts[0])
     graph.connectPorts(node3.outputPorts[0], node1.inputPorts[0])
     graph.connectPorts(node4.outputPorts[0], node2.inputPorts[1])
+    graph.connectPorts(node2.outputPorts[0], node5.inputPorts[0])
     graph.process(node2)
