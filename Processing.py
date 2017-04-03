@@ -63,7 +63,6 @@ class ProcessingNode:
 
 
     def process(self):
-        print('Node ' + self.name + ':')
         inFds = [ip.data[0] for ip in self.inputPorts]
         outFds = [op.data[1] for op in self.outputPorts]
         self.proc.run(inFds, outFds)
@@ -99,19 +98,19 @@ class Process:
         pass
 
     def run(self, inFds, outFds):
-        str = ""
+        str = b''
         for i in inFds:
-            iop = open(i, 'r')
+            iop = open(i, 'rb')
             if iop:
                 str += iop.readline()
                 iop.close()
 
-        str += self.name
+        #str += self.name
 
         #print('\t' + str)
 
         for o in outFds:
-            oop = open(o, 'w')
+            oop = open(o, 'wb')
             if oop:
                 oop.write(str)
                 oop.close()
@@ -124,25 +123,25 @@ class PrinterProcess(Process):
 
     def run(self, inFds, outFds):
         for  i in inFds:
-            oip = open(i, 'r')
+            oip = open(i, 'rb')
             if oip:
                 while True:
-                    line = oip.readline()
+                    line = oip.read()
                     if not line:
                         break
-                    print(name + ': ' + line)
+                    print(self.name + ': ' + ''.join(format(b, '02x') for b in line))
 
 
 class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
-        self.constant = 4
+        self.constant = 4.0
 
     def run(self, inFds, outFds):
         for o in outFds:
-            oop = open(o, 'w')
+            oop = os.fdopen(o, 'wb')
             if oop:
-                data = "".join(map(chr,struct.pack('f',self.constant))) + '\n'
+                data = struct.pack('f',self.constant)
                 oop.write(data)
                 oop.close()
 
@@ -154,15 +153,16 @@ class AdditionProcess(Process):
     def run(self, inFds, outFds):
         valSum = 0
         for i in inFds:
-            iop = open(i, 'r')
+            iop = os.fdopen(i, 'rb')
             if iop:
-                valSum += struct.unpack('f', iop.readline())
+                data = iop.read()
+                valSum += struct.unpack('f', data)[0]
                 iop.close()
 
         for o in outFds:
-            oop = open(o, 'w')
+            oop = os.fdopen(o, 'wb')
             if oop:
-                data = "".join(map(chr,struct.pack('f',valSum))) + '\n'
+                data = struct.pack('f',valSum)
                 oop.write(data)
                 oop.close()
 
@@ -184,4 +184,4 @@ if __name__ == '__main__':
     graph.connectPorts(node3.outputPorts[0], node1.inputPorts[0])
     graph.connectPorts(node4.outputPorts[0], node2.inputPorts[1])
     graph.connectPorts(node2.outputPorts[0], node5.inputPorts[0])
-    graph.process(node2)
+    graph.process(node5)
