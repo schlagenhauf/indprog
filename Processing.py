@@ -2,6 +2,7 @@
 
 import os
 import struct
+from abc import ABC, abstractmethod
 
 
 class ProcessingGraph:
@@ -48,10 +49,8 @@ class ProcessingGraph:
 ##
 # @brief A node bundles a process with input and output ports.
 class ProcessingNode:
-    def __init__(self, name, processType, inPorts = [], outPorts = []):
+    def __init__(self, name, processType):
         self.name = name
-        self.inputPorts = [Port(self, ip) for ip in inPorts]
-        self.outputPorts = [Port(self, op) for op in outPorts]
         if processType == "":
             self.proc = Process(name)
         elif processType == "const":
@@ -60,6 +59,10 @@ class ProcessingNode:
             self.proc = AdditionProcess(name)
         elif processType == "print":
             self.proc = PrinterProcess(name)
+
+        portSpecs = self.proc.getPortSpecs()
+        self.inputPorts = [Port(self, ip) for ip in portSpecs[0]]
+        self.outputPorts = [Port(self, op) for op in portSpecs[1]]
 
 
     def process(self):
@@ -85,7 +88,7 @@ class Port:
 
 ##
 # @brief Wrapper for the process that a node represents. Can wrap a variety of actions.
-class Process:
+class Process(ABC):
     def __init__(self, name):
         self.name = name
 
@@ -94,10 +97,14 @@ class Process:
     # can create them
     #
     # @return List of port specifications
+    @abstractmethod
     def getPortSpecs(self):
         pass
 
+    @abstractmethod
     def run(self, inFds, outFds):
+        pass
+        """
         str = b''
         for i in inFds:
             iop = open(i, 'rb')
@@ -114,11 +121,16 @@ class Process:
             if oop:
                 oop.write(str)
                 oop.close()
+        """
 
 
 class PrinterProcess(Process):
     def __init__(self, name):
         super(PrinterProcess, self).__init__(name)
+
+
+    def getPortSpecs(self):
+        return [['in'],[]]
 
 
     def run(self, inFds, outFds):
@@ -137,6 +149,9 @@ class ConstantProcess(Process):
         super(ConstantProcess, self).__init__(name)
         self.constant = 4.0
 
+    def getPortSpecs(self):
+        return [[],['out']]
+
     def run(self, inFds, outFds):
         for o in outFds:
             oop = os.fdopen(o, 'wb')
@@ -149,6 +164,9 @@ class ConstantProcess(Process):
 class AdditionProcess(Process):
     def __init__(self, name):
         super(AdditionProcess, self).__init__(name)
+
+    def getPortSpecs(self):
+        return [['summand1', 'summand2'],['sum']]
 
     def run(self, inFds, outFds):
         valSum = 0
@@ -170,18 +188,15 @@ class AdditionProcess(Process):
 
 if __name__ == '__main__':
     graph = ProcessingGraph()
-    node1 = ProcessingNode("node1", "", ["in"], ["out"])
-    node2 = ProcessingNode("node2", "add", ["in1", "in2"], ["out"])
-    node3 = ProcessingNode("node3", "const", [], ["out"])
-    node4 = ProcessingNode("node4", "const", [], ["out"])
-    node5 = ProcessingNode("node5", "print", ["in"], [])
-    graph.addNode(node1)
+    node2 = ProcessingNode("node2", "add")
+    node3 = ProcessingNode("node3", "const")
+    node4 = ProcessingNode("node4", "const")
+    node5 = ProcessingNode("node5", "print")
     graph.addNode(node2)
     graph.addNode(node3)
     graph.addNode(node4)
     graph.addNode(node5)
-    graph.connectPorts(node1.outputPorts[0], node2.inputPorts[0])
-    graph.connectPorts(node3.outputPorts[0], node1.inputPorts[0])
+    graph.connectPorts(node3.outputPorts[0], node2.inputPorts[0])
     graph.connectPorts(node4.outputPorts[0], node2.inputPorts[1])
     graph.connectPorts(node2.outputPorts[0], node5.inputPorts[0])
     graph.process(node5)
