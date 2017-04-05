@@ -15,7 +15,7 @@ class ProcessingGraph:
 
 
     def connectPorts(self, portFrom, portTo):
-        if portFrom.direction == portTo.direction:
+        if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
             return False
         else:
             portFrom.connectedTo = portTo
