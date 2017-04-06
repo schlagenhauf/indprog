@@ -11,16 +11,17 @@ from gi.repository import GtkFlow
 
 import sys
 
-class ExampleNode(GFlow.SimpleNode):
+class BaseNode(GFlow.SimpleNode):
     def __new__(cls, *args, **kwargs):
         x = GFlow.SimpleNode.new()
         x.__class__ = cls
         return x
 
-class StringNode(ExampleNode):
+class FlowNode(BaseNode):
     def __init__(self):
-        ExampleNode.__init__(self)
+        BaseNode.__init__(self)
 
+        """
         self.source = GFlow.SimpleSource.new("")
         self.source.set_name("output")
         self.source.set_valid()
@@ -29,13 +30,17 @@ class StringNode(ExampleNode):
         self.entry = Gtk.Entry()
         self.entry.connect("changed", self.do_changed)
 
+        """
         self.set_name("String")
 
     def do_changed(self, widget=None, data=None):
         self.source.set_value(self.entry.get_text())
 
-class PrintNode(ExampleNode):
+"""
+class PrintNode(BaseNode):
     def __init__(self):
+        BaseNode.__init__(self)
+
         self.sink = GFlow.SimpleSink.new("")
         self.sink.set_name("")
         self.sink.connect("changed", self.do_printing)
@@ -51,14 +56,17 @@ class PrintNode(ExampleNode):
             self.childlabel.set_text(v)
         except:
             self.childlabel.set_text("")
+"""
 
 class MeadpipeGui(object):
     def __init__(self):
         w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
+        w.connect("destroy", self.__quit())
+
+    def populateHud(self):
         self.nv = GtkFlow.NodeView.new()
         self.nv.set_show_types(True)
 
-        """
         hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
         create_printnode_button = Gtk.Button("Create PrintNode")
         create_printnode_button.connect("clicked", self.do_create_printnode)
@@ -72,24 +80,22 @@ class MeadpipeGui(object):
         vbox.pack_start(self.nv, True, True, 0)
 
         w.add(vbox)
-        """
         w.add(self.nv)
         w.show_all()
-        w.connect("destroy", self.do_quit)
-        Gtk.main()
+        w.connect("destroy", self.__quit())
 
-    def do_create_printnode(self, widget=None, data=None):
-        n = PrintNode()
-        self.nv.add_with_child(n, n.childlabel)
-        self.nv.set_show_types(True)
-
-    def do_create_stringnode(self, widget=None, data=None):
-        n = StringNode()
+    def createFlowNode(self, widget=None, data=None):
+        n = FlowNode()
+        # TODO: fill node with all infos
         self.nv.add_with_child(n, n.entry)
 
-    def do_quit(self, widget=None, data=None):
+    def __quit(self, widget=None, data=None):
         Gtk.main_quit()
         sys.exit(0)
+
+    def run(self):
+        w.show_all()
+        Gtk.main()
 
 if __name__ == "__main__":
     MeadpipeGui()
