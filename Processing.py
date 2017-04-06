@@ -60,9 +60,24 @@ class ProcessingNode:
         elif processType == "print":
             self.proc = PrinterProcess(name)
 
+        # create ports
         portSpecs = self.proc.getPortSpecs()
         self.inputPorts = [Port(self, ip) for ip in portSpecs[0]]
         self.outputPorts = [Port(self, op) for op in portSpecs[1]]
+
+        # create parameters
+        self.parameters = self.proc.getParams()
+
+
+    ##
+    # @brief Sets parameter <name> to value <value>
+    # This method does not create new parameters.
+    def setParam(self, name, value):
+        if name in self.parameters:
+            self.parameters[name] = value
+            return True
+        else:
+            return False
 
 
     def process(self):
@@ -91,6 +106,7 @@ class Port:
 class Process(ABC):
     def __init__(self, name):
         self.name = name
+        self.params = {}
 
     ##
     # @brief Returns the port specifications of this process so that the containing node
@@ -100,6 +116,14 @@ class Process(ABC):
     @abstractmethod
     def getPortSpecs(self):
         pass
+
+
+    ##
+    # @brief Returns a reference to the parameter dictionary
+    #
+    # @return Dictionary of parameter names and values
+    def getParams(self):
+        return self.params
 
     @abstractmethod
     def run(self, inFds, outFds):
@@ -128,10 +152,8 @@ class PrinterProcess(Process):
     def __init__(self, name):
         super(PrinterProcess, self).__init__(name)
 
-
     def getPortSpecs(self):
         return [['in'],[]]
-
 
     def run(self, inFds, outFds):
         for  i in inFds:
@@ -141,13 +163,16 @@ class PrinterProcess(Process):
                     line = oip.read()
                     if not line:
                         break
-                    print(self.name + ': ' + ''.join(format(b, '02x') for b in line))
+                    print(self.name)
+                    print('\t' + '0x' + ' 0x'.join(format(b, '02x') for b in line))
+                    print('\t' + str(line))
 
 
 class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
-        self.constant = 4.0
+        self.constant = 9.0
+        self.params = {'value': 1}
 
     def getPortSpecs(self):
         return [[],['out']]
@@ -170,20 +195,23 @@ class AdditionProcess(Process):
 
     def run(self, inFds, outFds):
         valSum = 0
+        print('Adding: ')
         for i in inFds:
             iop = os.fdopen(i, 'rb')
             if iop:
                 data = iop.read()
-                valSum += struct.unpack('f', data)[0]
+                val = struct.unpack('f', data)[0]
+                print(' + ' + str(val))
+                valSum += val
                 iop.close()
 
-        for o in outFds:
-            oop = os.fdopen(o, 'wb')
-            if oop:
-                data = struct.pack('f',valSum)
-                oop.write(data)
-                oop.close()
+        print(' = ' + str(valSum))
 
+        oop = os.fdopen(outFds[0], 'wb')
+        if oop:
+            data = struct.pack('f',valSum)
+            oop.write(data)
+            oop.close()
 
 
 if __name__ == '__main__':
@@ -192,6 +220,8 @@ if __name__ == '__main__':
     node3 = ProcessingNode("node3", "const")
     node4 = ProcessingNode("node4", "const")
     node5 = ProcessingNode("node5", "print")
+    node3.setParam('value', 3);
+    node4.setParam('value', 1);
     graph.addNode(node2)
     graph.addNode(node3)
     graph.addNode(node4)
