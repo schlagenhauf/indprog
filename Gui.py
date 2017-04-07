@@ -43,7 +43,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             self.add_sink(sink)
 
 
-    def setParams(self):
+    def setParams(self, paramDict):
         pass
 
 
@@ -51,24 +51,15 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.source.set_value(self.entry.get_text())
 
 class FlowGui(object):
-    def populate(self, gtkWindow):
+    def __init__(self, w, vbox):
         self.nv = GtkFlow.NodeView.new()
         self.nv.set_show_types(True)
 
-        btnBox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        btnAddNode = Gtk.Button("Create Node")
-        btnAddNode.connect("clicked", self.createFlowNode)
-        btnBox.add(btnAddNode)
+        vbox.pack_end(self.nv, True, True, 0)
+        w.add(self.nv)
 
-        vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        vbox.pack_start(btnBox, False, False, 0)
-        vbox.pack_start(self.nv, True, True, 0)
-
-        gtkWindow.add(vbox)
-        gtkWindow.add(self.nv)
-
-    def createFlowNode(self, widget=None, data=None):
+    def createFlowNode(self, ins, outs, params):
         n = FlowGuiNode()
-        n.setPorts(['in1','in2'],['out1','out2'])
+        n.setPorts(ins, outs)
+        n.setParams(params)
         self.nv.add_node(n)
-        return n
