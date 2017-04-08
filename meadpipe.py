@@ -11,7 +11,7 @@ from gi.repository import GtkFlow
 
 import sys
 
-from Processing import ProcessingGraph
+from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
 
 class Meadpipe(object):
@@ -29,21 +29,28 @@ class Meadpipe(object):
         Gtk.main_quit()
         sys.exit(0)
 
-    def __createNode(self, widget=None, data=None):
-        #self.procGraph.addNode()
-        ins = ['in','in','in']
-        outs = ['out','out','out']
-        params = {}
+    def __createNode(self, nodeType, widget=None, data=None):
+        node = ProcessingNode('node1', nodeType)
+        ins, outs = node.proc.getPortSpecs()
+        params = node.proc.getParams()
         self.fgui.createFlowNode(ins, outs, params)
+        self.procGraph.addNode(node)
 
 
     def createHud(self):
-        btnBox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        btnFrame = Gtk.AspectFrame.new('', 0, 0, 3.0, False)
-        btnAddNode = Gtk.Button("Create Node")
-        btnAddNode.connect("clicked", self.__createNode)
-        btnFrame.add(btnAddNode)
-        btnBox.add(btnFrame)
+        btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+
+        btn = Gtk.Button("Create Const Node")
+        btn.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
+        btnBox.add(btn)
+
+        btn = Gtk.Button("Create Add Node")
+        btn.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
+        btnBox.add(btn)
+
+        btn = Gtk.Button("Create Print Node")
+        btn.connect("clicked", lambda w = None, d = None: self.__createNode('print', w, d))
+        btnBox.add(btn)
 
         self.vbox.pack_start(btnBox, False, False, 0)
 

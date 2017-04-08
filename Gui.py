@@ -17,30 +17,20 @@ class FlowGuiNode(GFlow.SimpleNode):
         return x
 
     def __init__(self):
-
-        """
-        self.source = GFlow.SimpleSource.new("")
-        self.source.set_name("output")
-        self.source.set_valid()
-        self.add_source(self.source)
-
-        self.entry = Gtk.Entry()
-        self.entry.connect("changed", self.do_changed)
-        """
-
-        self.set_name("String")
+        self.set_name("FlowGuiNode")
 
     def setPorts(self, ins, outs):
         for i in ins:
+            sink = GFlow.SimpleSink.new("")
+            sink.set_name(i)
+            self.add_sink(sink)
+
+        for o in outs:
             source = GFlow.SimpleSource.new("")
-            source.set_name(i)
+            source.set_name(o)
             source.set_valid()
             self.add_source(source)
 
-        for o in outs:
-            sink = GFlow.SimpleSink.new("")
-            sink.set_name(o)
-            self.add_sink(sink)
 
 
     def setParams(self, paramDict):
