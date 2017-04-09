@@ -107,15 +107,15 @@ class Process(ABC):
     def __init__(self, name):
         self.name = name
         self.params = {}
+        self.portSpecs = [[],[]]
 
     ##
     # @brief Returns the port specifications of this process so that the containing node
     # can create them
     #
     # @return List of port specifications
-    @abstractmethod
     def getPortSpecs(self):
-        pass
+        return self.portSpecs
 
 
     ##
@@ -128,24 +128,6 @@ class Process(ABC):
     @abstractmethod
     def run(self, inFds, outFds):
         pass
-        """
-        str = b''
-        for i in inFds:
-            iop = open(i, 'rb')
-            if iop:
-                str += iop.readline()
-                iop.close()
-
-        #str += self.name
-
-        #print('\t' + str)
-
-        for o in outFds:
-            oop = open(o, 'wb')
-            if oop:
-                oop.write(str)
-                oop.close()
-        """
 
 
 class PrinterProcess(Process):
