@@ -19,6 +19,7 @@ class Meadpipe(object):
         self.w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
         self.w.connect("destroy", self.__quit)
         self.vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.w.add(self.vbox)
 
         self.createHud()
 
@@ -30,12 +31,11 @@ class Meadpipe(object):
         sys.exit(0)
 
     def __createNode(self, nodeType, widget=None, data=None):
-        node = ProcessingNode('node1', nodeType)
-        ins, outs = node.proc.getPortSpecs()
-        params = node.proc.getParams()
-        self.fgui.createFlowNode(ins, outs, params)
-        self.procGraph.addNode(node)
+        node = self.procGraph.createNode('node1', nodeType)
+        self.fgui.createFlowNode(node)
 
+    def __executeGraph(self, widget=None, data=None):
+        self.procGraph.process()
 
     def createHud(self):
         btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
@@ -54,7 +54,12 @@ class Meadpipe(object):
 
         self.vbox.pack_start(btnBox, False, False, 0)
 
-        self.w.add(self.vbox)
+        btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        btn = Gtk.Button("Execute")
+        btn.connect("clicked", self.__executeGraph)
+        btnBox.add(btn)
+        self.vbox.pack_end(btnBox, False, False, 0)
+
 
     def run(self):
         self.w.show_all()

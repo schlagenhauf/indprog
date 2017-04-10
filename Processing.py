@@ -10,8 +10,10 @@ class ProcessingGraph:
         self.nodes = []
 
 
-    def addNode(self, node):
+    def createNode(self, name, processType):
+        node = ProcessingNode(name, processType)
         self.nodes.append(node)
+        return node
 
 
     def connectPorts(self, portFrom, portTo):
@@ -24,7 +26,9 @@ class ProcessingGraph:
             return True
 
 
-    def process(self, node):
+    def process(self, node=None):
+        if not node:
+            node = self.nodes[-1]
         nodeList = self.getNodesRecurs(node)
         for n in nodeList:
             n.process()
@@ -62,11 +66,11 @@ class ProcessingNode:
 
         # create ports
         portSpecs = self.proc.getPortSpecs()
-        self.inputPorts = [Port(self, ip) for ip in portSpecs[0]]
-        self.outputPorts = [Port(self, op) for op in portSpecs[1]]
+        self.inputPorts = [Port(self, ip, 'in') for ip in portSpecs[0]]
+        self.outputPorts = [Port(self, op, 'out') for op in portSpecs[1]]
 
-        # create parameters
-        self.parameters = self.proc.getParams()
+    def getParams(self):
+        return self.proc.getParams()
 
 
     ##
@@ -90,8 +94,9 @@ class ProcessingNode:
 # @brief A port represents one of possibly many inputs or outputs of a node.
 # If an output port is created, a filesystem pipe is created along with it
 class Port:
-    def __init__(self, node, direction):
+    def __init__(self, node, name, direction):
         self.node = node
+        self.name = name
         self.direction = direction
         self.connectedTo = None
 
@@ -172,7 +177,7 @@ class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
         self.constant = 9.0
-        self.params = {'value': 1}
+        self.params = {'value': 1, 'another value' : 123}
 
     def getPortSpecs(self):
         return [[],['out']]
