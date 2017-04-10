@@ -31,7 +31,7 @@ class Meadpipe(object):
         sys.exit(0)
 
     def __createNode(self, nodeType, widget=None, data=None):
-        node = self.procGraph.createNode('node1', nodeType)
+        node = self.procGraph.createNode('node_' + nodeType, nodeType)
         self.fgui.createFlowNode(node)
 
     def __executeGraph(self, widget=None, data=None):

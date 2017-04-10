@@ -16,14 +16,14 @@ class ProcessingGraph:
         return node
 
 
-    def connectPorts(self, portFrom, portTo):
-        if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
-            return False
-        else:
-            portFrom.connectedTo = portTo
-            portTo.connectedTo = portFrom
-            portTo.data = portFrom.data
-            return True
+    #def connectPorts(self, portFrom, portTo):
+    #    if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
+    #        return False
+    #    else:
+    #        portFrom.connectedTo = portTo
+    #        portTo.connectedTo = portFrom
+    #        portTo.data = portFrom.data
+    #        return True
 
 
     def process(self, node=None):
@@ -53,6 +53,20 @@ class ProcessingGraph:
 ##
 # @brief A node bundles a process with input and output ports.
 class ProcessingNode:
+    @classmethod
+    def connectPorts(self, portFrom, portTo):
+        if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
+            return False
+        else:
+            portFrom.connectedTo = portTo
+            portTo.connectedTo = portFrom
+            portTo.data = portFrom.data
+            return True
+
+    @classmethod
+    def disconnectPorts(self, portFrom, portTo):
+        print("DISCONNECTING PORTS NOT IMPLEMENTED!!!")
+
     def __init__(self, name, processType):
         self.name = name
         if processType == "":
@@ -66,8 +80,8 @@ class ProcessingNode:
 
         # create ports
         portSpecs = self.proc.getPortSpecs()
-        self.inputPorts = [Port(self, ip, 'in') for ip in portSpecs[0]]
-        self.outputPorts = [Port(self, op, 'out') for op in portSpecs[1]]
+        self.inputPorts = {ip : Port(self, ip, 'in') for ip in portSpecs[0]}
+        self.outputPorts = {op : Port(self, op, 'out') for op in portSpecs[1]}
 
     def getParams(self):
         return self.proc.getParams()
