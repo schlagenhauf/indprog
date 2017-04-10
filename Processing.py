@@ -9,22 +9,10 @@ class ProcessingGraph:
     def __init__(self):
         self.nodes = []
 
-
     def createNode(self, name, processType):
         node = ProcessingNode(name, processType)
         self.nodes.append(node)
         return node
-
-
-    #def connectPorts(self, portFrom, portTo):
-    #    if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
-    #        return False
-    #    else:
-    #        portFrom.connectedTo = portTo
-    #        portTo.connectedTo = portFrom
-    #        portTo.data = portFrom.data
-    #        return True
-
 
     def process(self, node=None):
         if not node:
@@ -34,8 +22,8 @@ class ProcessingGraph:
             n.process()
 
     def getNodesRecurs(self, node):
-        # get connected nodes via the ports
-        predecNodes = set([inPort.connectedTo.node for inPort in node.inputPorts if inPort.connectedTo])
+        # get connected nodes via the ports (list comprehension orgy)
+        predecNodes = set([port.node for inPort in node.inputPorts.values() if inPort.connectedTo for port in inPort.connectedTo])
 
         # get nodes from predecessors recursively
         nodes = [self.getNodesRecurs(n) for n in predecNodes]
@@ -58,14 +46,18 @@ class ProcessingNode:
         if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
             return False
         else:
-            portFrom.connectedTo = portTo
-            portTo.connectedTo = portFrom
+            # if there is already someone connected to this sink / input
+            if len(portTo.connectedTo) >= 1:
+                return false
+            portFrom.connectedTo.add(portTo)
+            portTo.connectedTo.add(portFrom)
             portTo.data = portFrom.data
             return True
 
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
         print("DISCONNECTING PORTS NOT IMPLEMENTED!!!")
+        return False
 
     def __init__(self, name, processType):
         self.name = name
@@ -99,8 +91,8 @@ class ProcessingNode:
 
 
     def process(self):
-        inFds = [ip.data[0] for ip in self.inputPorts]
-        outFds = [op.data[1] for op in self.outputPorts]
+        inFds = [ip.data[0] for ip in self.inputPorts.values()]
+        outFds = [op.data[1] for op in self.outputPorts.values()]
         self.proc.run(inFds, outFds)
 
 
@@ -112,7 +104,7 @@ class Port:
         self.node = node
         self.name = name
         self.direction = direction
-        self.connectedTo = None
+        self.connectedTo = set()
 
         if direction == "in":
             self.data = None
@@ -183,8 +175,8 @@ class PrinterProcess(Process):
                     if not line:
                         break
                     print(self.name)
+                    print(struct.unpack('f', line)[0])
                     print('\t' + '0x' + ' 0x'.join(format(b, '02x') for b in line))
-                    print('\t' + str(line))
 
 
 class ConstantProcess(Process):
@@ -231,21 +223,3 @@ class AdditionProcess(Process):
             data = struct.pack('f',valSum)
             oop.write(data)
             oop.close()
-
-
-if __name__ == '__main__':
-    graph = ProcessingGraph()
-    node2 = ProcessingNode("node2", "add")
-    node3 = ProcessingNode("node3", "const")
-    node4 = ProcessingNode("node4", "const")
-    node5 = ProcessingNode("node5", "print")
-    node3.setParam('value', 3);
-    node4.setParam('value', 1);
-    graph.addNode(node2)
-    graph.addNode(node3)
-    graph.addNode(node4)
-    graph.addNode(node5)
-    graph.connectPorts(node3.outputPorts[0], node2.inputPorts[0])
-    graph.connectPorts(node4.outputPorts[0], node2.inputPorts[1])
-    graph.connectPorts(node2.outputPorts[0], node5.inputPorts[0])
-    graph.process(node5)
