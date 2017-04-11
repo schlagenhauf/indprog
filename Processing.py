@@ -183,7 +183,7 @@ class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
         self.constant = 9.0
-        self.params = {'value': 1, 'another value' : 123}
+        self.params = {'value': 1}
 
     def getPortSpecs(self):
         return [[],['out']]

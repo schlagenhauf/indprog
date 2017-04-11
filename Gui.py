@@ -22,6 +22,15 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.setParams(procNode.getParams())
         self.set_name(procNode.name)
 
+        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        sep = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
+        self.vbox.pack_start(sep, True, True, 0)
+
+        self.expander = Gtk.Expander.new('Parameters')
+        self.expander.set_resize_toplevel(True)
+
+        print(dir(self))
+
         self.paramBox = Gtk.ListBox()
         for k,v in self.procNode.getParams().items():
             hbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)
@@ -32,6 +41,9 @@ class FlowGuiNode(GFlow.SimpleNode):
             row = Gtk.ListBoxRow()
             row.add(hbox)
             self.paramBox.add(row)
+
+        self.expander.add(self.paramBox)
+        self.vbox.pack_end(self.expander, True, True, 0)
 
 
     def setPorts(self, ins, outs):
@@ -86,5 +98,5 @@ class FlowGui(object):
 
     def createFlowNode(self, procNode):
         n = FlowGuiNode(procNode)
-        self.nv.add_with_child(n, n.paramBox)
+        self.nv.add_with_child(n, n.vbox)
         #self.nv.add_node(n)
