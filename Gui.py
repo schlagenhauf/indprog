@@ -29,8 +29,6 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.expander = Gtk.Expander.new('Parameters')
         self.expander.set_resize_toplevel(True)
 
-        print(dir(self))
-
         self.paramBox = Gtk.ListBox()
         for k,v in self.procNode.getParams().items():
             hbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)

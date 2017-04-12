@@ -54,6 +54,14 @@ class ProcessingNode:
             portTo.data = portFrom.data
             return True
 
+
+            #p = os.pipe()
+            #portTo.fd = p[1]
+            #portTo.stream = open(portTo.fd, 'rb')
+            #portFrom.fd = p[2]
+            #portFrom.stream = open(portFrom.fd, 'wb')
+            #return True
+
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
         print("DISCONNECTING PORTS NOT IMPLEMENTED!!!")
