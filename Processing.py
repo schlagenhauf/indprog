@@ -14,24 +14,35 @@ class ProcessingGraph:
         self.nodes.append(node)
         return node
 
-    def process(self, node=None):
-        if not node:
-            node = self.nodes[-1]
-        nodeList = self.getNodesRecurs(node)
-        for n in nodeList:
+    def getSinks(self):
+        return [n for n in self.nodes if not n.outputPorts or not any([op.connectedTo for op in n.outputPorts.values()])]
+
+    def process(self, startNodes=None):
+        if not startNodes:
+            startNodes = self.getSinks()
+        sequence = self.topologicalSort(startNodes)
+        for n in sequence:
             n.process()
 
-    def getNodesRecurs(self, node):
-        # get connected nodes via the ports (list comprehension orgy)
-        predecNodes = set([port.node for inPort in node.inputPorts.values() if inPort.connectedTo for port in inPort.connectedTo])
+    def topologicalSort(self, startNodes):
+        # TODO: check for cycles by testing for leftover edges when done
+        # copy the main graph structure
+        pureGraph =  {n : n.getConnectedNodes() for n in self.nodes}
 
-        # get nodes from predecessors recursively
-        nodes = [self.getNodesRecurs(n) for n in predecNodes]
+        sequence = []
+        while startNodes:
+            n = startNodes.pop()
+            sequence.append(n)
+            for pn in pureGraph[n][0]:
+                pureGraph[pn][1].remove(n)
+                if len(pureGraph[pn][1]) == 0:
+                    startNodes.append(pn)
+            pureGraph[n][0] = []
 
-        # flatten list and append this node
-        nodes = [m for n in nodes for m in n] + [node]
+        return sequence
 
-        return self.uniqueSeq(nodes)
+
+
 
     def uniqueSeq(self, seq):
         seen = set()
@@ -96,6 +107,11 @@ class ProcessingNode:
             return True
         else:
             return False
+
+    def getConnectedNodes(self):
+        predecNodes = set([port.node for inPort in self.inputPorts.values() if inPort.connectedTo for port in inPort.connectedTo])
+        succesNodes = set([port.node for outPort in self.outputPorts.values() if outPort.connectedTo for port in outPort.connectedTo])
+        return [predecNodes, succesNodes]
 
 
     def process(self):
