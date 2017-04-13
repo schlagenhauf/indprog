@@ -41,9 +41,6 @@ class ProcessingGraph:
 
         return sequence
 
-
-
-
     def uniqueSeq(self, seq):
         seen = set()
         return [x for x in seq if not (x in seen or seen.add(x))]
@@ -75,7 +72,10 @@ class ProcessingNode:
 
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
-        print("DISCONNECTING PORTS NOT IMPLEMENTED!!!")
+        portFrom.connectedTo.remove(portTo)
+        portTo.connectedTo.remove(portFrom)
+        portFrom.data = None
+        portTo.data = None
         return False
 
     def __init__(self, name, processType):
