@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 
-from Processing import Process
-
+#import os, sys, tempfile
 import matlab.engine
+import tempfile
 
+from Processing import Process
 
 class MatlabProcess(Process):
     def __init__(self):
@@ -21,4 +22,13 @@ class MatlabProcess(Process):
 
 if __name__ == '__main__':
     mp = MatlabProcess()
-    mp.run([],[])
+
+    inFile = tempfile.SpooledTemporaryFile()
+    outFile = tempfile.SpooledTemporaryFile()
+
+    inFile.write(b"test")
+    inFile.seek(0)
+
+    print([inFile.fileno(),outFile.fileno()])
+
+    mp.run([inFile.fileno(), 23],[outFile.fileno(), 24])
