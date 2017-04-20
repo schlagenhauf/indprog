@@ -3,6 +3,8 @@
 import os
 import struct
 from abc import ABC, abstractmethod
+import uuid
+import tempfile
 
 
 class ProcessingGraph:
@@ -59,23 +61,17 @@ class ProcessingNode:
                 return false
             portFrom.connectedTo.add(portTo)
             portTo.connectedTo.add(portFrom)
-            portTo.data = portFrom.data
+            portFrom.fileObj = tempfile.NamedTemporaryFile(delete = False)
+            portTo.fileObj = open(portFrom.fileObj.name, 'rb')
             return True
-
-
-            #p = os.pipe()
-            #portTo.fd = p[1]
-            #portTo.stream = open(portTo.fd, 'rb')
-            #portFrom.fd = p[2]
-            #portFrom.stream = open(portFrom.fd, 'wb')
-            #return True
 
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
         portFrom.connectedTo.remove(portTo)
         portTo.connectedTo.remove(portFrom)
-        portFrom.data = None
-        portTo.data = None
+        portFrom.fileObj.close()
+        portTo.fileObj.close()
+        os.unlink(portFrom.name)
         return False
 
     def __init__(self, name, processType):
@@ -97,7 +93,6 @@ class ProcessingNode:
     def getParams(self):
         return self.proc.getParams()
 
-
     ##
     # @brief Sets parameter <name> to value <value>
     # This method does not create new parameters.
@@ -113,11 +108,10 @@ class ProcessingNode:
         succesNodes = set([port.node for outPort in self.outputPorts.values() if outPort.connectedTo for port in outPort.connectedTo])
         return [predecNodes, succesNodes]
 
-
     def process(self):
-        inFds = [ip.data[0] for ip in self.inputPorts.values()]
-        outFds = [op.data[1] for op in self.outputPorts.values()]
-        self.proc.run(inFds, outFds)
+        inFiles = [inPort.fileObj.name for inPort in self.inputPorts.values()]
+        outFiles = [outPort.fileObj.name for outPort in self.outputPorts.values()]
+        self.proc.run(inFiles, outFiles)
 
 
 ##
@@ -130,10 +124,13 @@ class Port:
         self.direction = direction
         self.connectedTo = set()
 
-        if direction == "in":
-            self.data = None
-        else:
-            self.data = os.pipe()
+        self.fileObj = None
+
+
+    def __del__(self):
+        pass
+        #if self.fileObj:
+        #    os.unlink(self.fileObj)
 
 
 ##
@@ -163,24 +160,6 @@ class Process(ABC):
     @abstractmethod
     def run(self, inFds, outFds):
         pass
-        """
-        str = b''
-        for i in inFds:
-            iop = open(i, 'rb')
-            if iop:
-                str += iop.readline()
-                iop.close()
-
-        #str += self.name
-
-        #print('\t' + str)
-
-        for o in outFds:
-            oop = open(o, 'wb')
-            if oop:
-                oop.write(str)
-                oop.close()
-        """
 
 
 class PrinterProcess(Process):
@@ -201,6 +180,7 @@ class PrinterProcess(Process):
                     print(self.name)
                     print(struct.unpack('f', line)[0])
                     print('\t' + '0x' + ' 0x'.join(format(b, '02x') for b in line))
+                oip.close()
 
 
 class ConstantProcess(Process):
@@ -214,7 +194,7 @@ class ConstantProcess(Process):
 
     def run(self, inFds, outFds):
         for o in outFds:
-            oop = os.fdopen(o, 'wb')
+            oop = open(o, 'wb')
             if oop:
                 data = struct.pack('f',self.constant)
                 oop.write(data)
