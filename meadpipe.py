@@ -38,27 +38,36 @@ class Meadpipe(object):
         self.procGraph.process()
 
     def createHud(self):
-        btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.tools = Gtk.ToolPalette()
 
-        btn = Gtk.Button("Create Const Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
-        btnBox.add(btn)
+        # general functions
+        generalTools = Gtk.ToolItemGroup.new('General')
+        self.tools.add(generalTools)
 
-        btn = Gtk.Button("Create Add Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
-        btnBox.add(btn)
+        runItem = Gtk.ToolButton.new(None, 'Run')
+        runItem.connect("clicked", self.__executeGraph)
+        generalTools.insert(runItem, -1)
 
-        btn = Gtk.Button("Create Print Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('print', w, d))
-        btnBox.add(btn)
+        # node functions
+        newNodeTools = Gtk.ToolItemGroup.new('New Node')
+        self.tools.add(newNodeTools)
 
-        self.vbox.pack_start(btnBox, False, False, 0)
+        constNodeItem = Gtk.ToolButton.new(None, 'Constant')
+        constNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
+        newNodeTools.insert(constNodeItem, -1)
 
-        btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        btn = Gtk.Button("Execute")
-        btn.connect("clicked", self.__executeGraph)
-        btnBox.add(btn)
-        self.vbox.pack_end(btnBox, False, False, 0)
+        printNodeItem = Gtk.ToolButton.new(None, 'Printer')
+        printNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('print', w, d))
+        newNodeTools.insert(printNodeItem, -1)
+
+        adderNodeItem = Gtk.ToolButton.new(None, 'Adder')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
+        self.vbox.pack_start(self.tools, False, False, 0)
+
+        vsep = Gtk.VSeparator()
+        self.vbox.pack_start(vsep, False, False, 0)
 
 
     def run(self):
