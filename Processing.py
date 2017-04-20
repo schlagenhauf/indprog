@@ -109,9 +109,12 @@ class ProcessingNode:
         return [predecNodes, succesNodes]
 
     def process(self):
-        inFiles = [inPort.fileObj.name for inPort in self.inputPorts.values()]
-        outFiles = [outPort.fileObj.name for outPort in self.outputPorts.values()]
-        self.proc.run(inFiles, outFiles)
+        inFiles = [inPort.fileObj.name if inPort.fileObj else None for inPort in self.inputPorts.values()]
+        outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
+        if all(inFiles) and all(outFiles):
+            self.proc.run(inFiles, outFiles)
+        else:
+            print('Warning: one or more ports are not connected. This not will not be processed!')
 
 
 ##
@@ -212,7 +215,7 @@ class AdditionProcess(Process):
         valSum = 0
         print('Adding: ')
         for i in inFds:
-            iop = os.fdopen(i, 'rb')
+            iop = open(i, 'rb')
             if iop:
                 data = iop.read()
                 val = struct.unpack('f', data)[0]
@@ -222,7 +225,7 @@ class AdditionProcess(Process):
 
         print(' = ' + str(valSum))
 
-        oop = os.fdopen(outFds[0], 'wb')
+        oop = open(outFds[0], 'wb')
         if oop:
             data = struct.pack('f',valSum)
             oop.write(data)
