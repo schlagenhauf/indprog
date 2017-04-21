@@ -114,7 +114,7 @@ class ProcessingNode:
         if all(inFiles) and all(outFiles):
             self.proc.run(inFiles, outFiles)
         else:
-            print('Warning: one or more ports are not connected. This not will not be processed!')
+            print('Warning: one or more ports are not connected. This node will not be processed!')
 
 
 ##

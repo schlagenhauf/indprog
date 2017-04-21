@@ -23,6 +23,13 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.set_name(procNode.name)
 
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.generateParamBox()
+
+
+    def generateParamBox(self):
+        if len(self.procNode.getParams()) == 0:
+            return
+
         sep = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
         self.vbox.pack_start(sep, True, True, 0)
 
