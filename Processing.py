@@ -28,7 +28,7 @@ class ProcessingGraph:
         sequence = self.topologicalSort(startNodes)
 
         logger.info('Start processing (%d / %d nodes, %d sinks)', len(sequence), len(self.nodes), len(startNodes))
-        for n in sequence:
+        for n in reversed(sequence):
             n.process()
         logger.info('Finished processing')
 
@@ -55,16 +55,20 @@ class ProcessingGraph:
 class ProcessingNode:
     @classmethod
     def connectPorts(self, portFrom, portTo):
-        if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
+        if portFrom.direction == portTo.direction:
+            logger.error('Cannot connect [%s:%s] to [%s:%s], both are of the same type ("%s").', \
+                portFrom.node.name, portFrom.name, portTo.node.name, portTo.name, portTo.direction)
             return False
-        else:
-            # if there is already someone connected to this sink / input
-            if len(portTo.connectedTo) >= 1:
-                return false
-            portFrom.connectedTo.add(portTo)
-            portTo.connectedTo.add(portFrom)
+        elif len(portTo.connectedTo) >= 1:
+            logger.error('Cannot connect [%s:%s] to [%s:%s], sink is already connected.',
+                portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
+            return false
+
+        portFrom.connectedTo.add(portTo)
+        portTo.connectedTo.add(portFrom)
+        if not portFrom.fileObj:
             portFrom.fileObj = tempfile.NamedTemporaryFile(delete = False)
-            portTo.fileObj = open(portFrom.fileObj.name, 'rb')
+        portTo.fileObj = open(portFrom.fileObj.name, 'rb')
 
         logger.debug('Connected [%s:%s] =>(%s)=> [%s:%s]', portFrom.node.name,\
                 portFrom.name, portFrom.fileObj.name, portTo.node.name, portTo.name)
