@@ -11,6 +11,15 @@ from gi.repository import GtkFlow
 
 import sys
 
+import logging
+logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+        datefmt="%H:%M:%S", stream=sys.stdout)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
 
@@ -69,11 +78,15 @@ class Meadpipe(object):
         vsep = Gtk.VSeparator()
         self.vbox.pack_start(vsep, False, False, 0)
 
+        logger.debug('HUD populated')
+
 
     def run(self):
         self.w.show_all()
         Gtk.main()
 
 if __name__ == '__main__':
+    logger.info('Starting...')
     mp = Meadpipe()
     mp.run()
+    logger.info('Quitting')

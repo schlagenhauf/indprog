@@ -5,6 +5,9 @@ import struct
 from abc import ABC, abstractmethod
 import uuid
 import tempfile
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ProcessingGraph:
@@ -23,8 +26,11 @@ class ProcessingGraph:
         if not startNodes:
             startNodes = self.getSinks()
         sequence = self.topologicalSort(startNodes)
+
+        logger.info('Start processing (%d / %d nodes, %d sinks)', len(sequence), len(self.nodes), len(startNodes))
         for n in sequence:
             n.process()
+        logger.info('Finished processing')
 
     def topologicalSort(self, startNodes):
         # TODO: check for cycles by testing for leftover edges when done
@@ -43,10 +49,6 @@ class ProcessingGraph:
 
         return sequence
 
-    def uniqueSeq(self, seq):
-        seen = set()
-        return [x for x in seq if not (x in seen or seen.add(x))]
-
 
 ##
 # @brief A node bundles a process with input and output ports.
@@ -63,15 +65,23 @@ class ProcessingNode:
             portTo.connectedTo.add(portFrom)
             portFrom.fileObj = tempfile.NamedTemporaryFile(delete = False)
             portTo.fileObj = open(portFrom.fileObj.name, 'rb')
-            return True
+
+        logger.debug('Connected [%s:%s] =>(%s)=> [%s:%s]', portFrom.node.name,\
+                portFrom.name, portFrom.fileObj.name, portTo.node.name, portTo.name)
+        return True
 
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
-        portFrom.connectedTo.remove(portTo)
-        portTo.connectedTo.remove(portFrom)
-        portFrom.fileObj.close()
-        portTo.fileObj.close()
-        os.unlink(portFrom.name)
+        try:
+            portFrom.connectedTo.remove(portTo)
+            portTo.connectedTo.remove(portFrom)
+            portFrom.fileObj.close()
+            portTo.fileObj.close()
+            os.unlink(portFrom.name)
+        except Exception as e:
+            logger.error('Failed to disconnect [%s:%s] =x= [%s:%s]: %s', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name, e.message)
+
+        logger.debug('Disconnected [%s:%s] =x= [%s:%s]', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
         return False
 
     def __init__(self, name, processType):
@@ -112,9 +122,10 @@ class ProcessingNode:
         inFiles = [inPort.fileObj.name if inPort.fileObj else None for inPort in self.inputPorts.values()]
         outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
         if all(inFiles) and all(outFiles):
+            logger.debug('Executing process')
             self.proc.run(inFiles, outFiles)
         else:
-            print('Warning: one or more ports are not connected. This node will not be processed!')
+            logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
 
 
 ##
@@ -176,13 +187,13 @@ class PrinterProcess(Process):
         for  i in inFds:
             oip = open(i, 'rb')
             if oip:
+                logger.info('PRINTER: Read from input file:')
                 while True:
                     line = oip.read()
                     if not line:
                         break
-                    print(self.name)
-                    print(struct.unpack('f', line)[0])
-                    print('\t' + '0x' + ' 0x'.join(format(b, '02x') for b in line))
+                    unpacked = struct.unpack('f', line)[0]
+                    logger.info('PRINTER: \t%s (%s)', unpacked, line)
                 oip.close()
 
 
@@ -200,7 +211,9 @@ class ConstantProcess(Process):
             oop = open(o, 'wb')
             if oop:
                 data = struct.pack('f',self.constant)
+                logger.debug('Write to output file: %s (%s)', self.constant, str(data))
                 oop.write(data)
+                oop.flush()
                 oop.close()
 
 
@@ -229,4 +242,5 @@ class AdditionProcess(Process):
         if oop:
             data = struct.pack('f',valSum)
             oop.write(data)
+            oop.flush()
             oop.close()
