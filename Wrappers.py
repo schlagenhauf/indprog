@@ -130,9 +130,14 @@ class BashProcess(Process):
     def __init__(self, name):
         super(BashProcess, self).__init__(name)
         self.scriptName = './bashTemplate.sh'
+        bashProc = subprocess.Popen(self.scriptName, shell=True, stdout=subprocess.PIPE)
+        portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
+        self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
+        print(self.portSpecs)
 
 
     def run(self, inFds, outFds):
-        cmd = self.scriptName + ' ' + ' '.join(map(str,inFds)) + ' ' + ' '.join(map(str,outFds))
-        #cmd = self.scriptName + ' --inFds=' + ','.join(map(str,inFds)) + ' --outFds=' + ','.join(map(str,outFds))
-        subprocess.call(cmd, shell=True)
+        cmd = self.scriptName + ' --inFds=' + ','.join(inFds) + ' --outFds=' + ','.join(outFds)
+        #bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        #print(bashProc.stdout.readline())
+        #subprocess.call(cmd, shell=True)
