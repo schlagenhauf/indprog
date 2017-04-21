@@ -11,6 +11,15 @@ from gi.repository import GtkFlow
 
 import sys
 
+import logging
+logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+        datefmt="%H:%M:%S", stream=sys.stdout)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
 
@@ -19,6 +28,7 @@ class Meadpipe(object):
         self.w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
         self.w.connect("destroy", self.__quit)
         self.vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.w.add(self.vbox)
 
         self.createHud()
 
@@ -30,36 +40,53 @@ class Meadpipe(object):
         sys.exit(0)
 
     def __createNode(self, nodeType, widget=None, data=None):
-        node = ProcessingNode('node1', nodeType)
-        ins, outs = node.proc.getPortSpecs()
-        params = node.proc.getParams()
-        self.fgui.createFlowNode(ins, outs, params)
-        self.procGraph.addNode(node)
+        node = self.procGraph.createNode('node_' + nodeType, nodeType)
+        self.fgui.createFlowNode(node)
 
+    def __executeGraph(self, widget=None, data=None):
+        self.procGraph.process()
 
     def createHud(self):
-        btnBox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.tools = Gtk.ToolPalette()
 
-        btn = Gtk.Button("Create Const Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
-        btnBox.add(btn)
+        # general functions
+        generalTools = Gtk.ToolItemGroup.new('General')
+        self.tools.add(generalTools)
 
-        btn = Gtk.Button("Create Add Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
-        btnBox.add(btn)
+        runItem = Gtk.ToolButton.new(None, 'Run')
+        runItem.connect("clicked", self.__executeGraph)
+        generalTools.insert(runItem, -1)
 
-        btn = Gtk.Button("Create Print Node")
-        btn.connect("clicked", lambda w = None, d = None: self.__createNode('print', w, d))
-        btnBox.add(btn)
+        # node functions
+        newNodeTools = Gtk.ToolItemGroup.new('New Node')
+        self.tools.add(newNodeTools)
 
-        self.vbox.pack_start(btnBox, False, False, 0)
+        constNodeItem = Gtk.ToolButton.new(None, 'Constant')
+        constNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
+        newNodeTools.insert(constNodeItem, -1)
 
-        self.w.add(self.vbox)
+        printNodeItem = Gtk.ToolButton.new(None, 'Printer')
+        printNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('print', w, d))
+        newNodeTools.insert(printNodeItem, -1)
+
+        adderNodeItem = Gtk.ToolButton.new(None, 'Adder')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
+        self.vbox.pack_start(self.tools, False, False, 0)
+
+        vsep = Gtk.VSeparator()
+        self.vbox.pack_start(vsep, False, False, 0)
+
+        logger.debug('HUD populated')
+
 
     def run(self):
         self.w.show_all()
         Gtk.main()
 
 if __name__ == '__main__':
+    logger.info('Starting...')
     mp = Meadpipe()
     mp.run()
+    logger.info('Quitting')

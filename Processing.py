@@ -3,52 +3,92 @@
 import os
 import struct
 from abc import ABC, abstractmethod
+import uuid
+import tempfile
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ProcessingGraph:
     def __init__(self):
         self.nodes = []
 
-
-    def addNode(self, node):
+    def createNode(self, name, processType):
+        node = ProcessingNode(name, processType)
         self.nodes.append(node)
+        return node
 
+    def getSinks(self):
+        return [n for n in self.nodes if not n.outputPorts or not any([op.connectedTo for op in n.outputPorts.values()])]
 
-    def connectPorts(self, portFrom, portTo):
-        if portFrom.direction == portTo.direction or portFrom.connectedTo or portTo.connectedTo:
-            return False
-        else:
-            portFrom.connectedTo = portTo
-            portTo.connectedTo = portFrom
-            portTo.data = portFrom.data
-            return True
+    def process(self, startNodes=None):
+        if not startNodes:
+            startNodes = self.getSinks()
+        sequence = self.topologicalSort(startNodes)
 
-
-    def process(self, node):
-        nodeList = self.getNodesRecurs(node)
-        for n in nodeList:
+        logger.info('Start processing (%d / %d node(s), %d sink(s))', len(sequence), len(self.nodes), len(startNodes))
+        for n in reversed(sequence):
             n.process()
+        logger.info('Finished processing')
 
-    def getNodesRecurs(self, node):
-        # get connected nodes via the ports
-        predecNodes = set([inPort.connectedTo.node for inPort in node.inputPorts if inPort.connectedTo])
+    def topologicalSort(self, startNodesRef):
+        startNodes = list(startNodesRef)
+        # TODO: check for cycles by testing for leftover edges when done
+        # copy the main graph structure
+        pureGraph =  {n : n.getConnectedNodes() for n in self.nodes}
 
-        # get nodes from predecessors recursively
-        nodes = [self.getNodesRecurs(n) for n in predecNodes]
+        sequence = []
+        while startNodes:
+            n = startNodes.pop()
+            sequence.append(n)
+            for pn in pureGraph[n][0]:
+                pureGraph[pn][1].remove(n)
+                if len(pureGraph[pn][1]) == 0:
+                    startNodes.append(pn)
+            pureGraph[n][0] = []
 
-        # flatten list and append this node
-        nodes = [m for n in nodes for m in n] + [node]
-
-        return self.uniqueSeq(nodes)
-
-    def uniqueSeq(self, seq):
-        seen = set()
-        return [x for x in seq if not (x in seen or seen.add(x))]
+        return sequence
 
 
 ##
 # @brief A node bundles a process with input and output ports.
 class ProcessingNode:
+    @classmethod
+    def connectPorts(self, portFrom, portTo):
+        if portFrom.direction == portTo.direction:
+            logger.error('Cannot connect [%s:%s] to [%s:%s], both are of the same type ("%s").', \
+                portFrom.node.name, portFrom.name, portTo.node.name, portTo.name, portTo.direction)
+            return False
+        elif len(portTo.connectedTo) >= 1:
+            logger.error('Cannot connect [%s:%s] to [%s:%s], sink is already connected.',
+                portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
+            return false
+
+        portFrom.connectedTo.add(portTo)
+        portTo.connectedTo.add(portFrom)
+        if not portFrom.fileObj:
+            portFrom.fileObj = tempfile.NamedTemporaryFile(delete = False)
+        portTo.fileObj = open(portFrom.fileObj.name, 'rb')
+
+        logger.debug('Connected [%s:%s] =>(%s)=> [%s:%s]', portFrom.node.name,\
+                portFrom.name, portFrom.fileObj.name, portTo.node.name, portTo.name)
+        return True
+
+    @classmethod
+    def disconnectPorts(self, portFrom, portTo):
+        try:
+            portFrom.connectedTo.remove(portTo)
+            portTo.connectedTo.remove(portFrom)
+            portFrom.fileObj.close()
+            portTo.fileObj.close()
+            os.unlink(portFrom.name)
+        except Exception as e:
+            logger.error('Failed to disconnect [%s:%s] =x= [%s:%s]: %s', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name, e.message)
+
+        logger.debug('Disconnected [%s:%s] =x= [%s:%s]', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
+        return False
+
     def __init__(self, name, processType):
         self.name = name
         if processType == "":
@@ -62,12 +102,11 @@ class ProcessingNode:
 
         # create ports
         portSpecs = self.proc.getPortSpecs()
-        self.inputPorts = [Port(self, ip) for ip in portSpecs[0]]
-        self.outputPorts = [Port(self, op) for op in portSpecs[1]]
+        self.inputPorts = {ip : Port(self, ip, 'in') for ip in portSpecs[0]}
+        self.outputPorts = {op : Port(self, op, 'out') for op in portSpecs[1]}
 
-        # create parameters
-        self.parameters = self.proc.getParams()
-
+    def getParams(self):
+        return self.proc.getParams()
 
     ##
     # @brief Sets parameter <name> to value <value>
@@ -79,26 +118,38 @@ class ProcessingNode:
         else:
             return False
 
+    def getConnectedNodes(self):
+        predecNodes = set([port.node for inPort in self.inputPorts.values() if inPort.connectedTo for port in inPort.connectedTo])
+        succesNodes = set([port.node for outPort in self.outputPorts.values() if outPort.connectedTo for port in outPort.connectedTo])
+        return [predecNodes, succesNodes]
 
     def process(self):
-        inFds = [ip.data[0] for ip in self.inputPorts]
-        outFds = [op.data[1] for op in self.outputPorts]
-        self.proc.run(inFds, outFds)
+        inFiles = [inPort.fileObj.name if inPort.fileObj else None for inPort in self.inputPorts.values()]
+        outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
+        if all(inFiles) and all(outFiles):
+            logger.debug('Executing process')
+            self.proc.run(inFiles, outFiles)
+        else:
+            logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
 
 
 ##
 # @brief A port represents one of possibly many inputs or outputs of a node.
 # If an output port is created, a filesystem pipe is created along with it
 class Port:
-    def __init__(self, node, direction):
+    def __init__(self, node, name, direction):
         self.node = node
+        self.name = name
         self.direction = direction
-        self.connectedTo = None
+        self.connectedTo = set()
 
-        if direction == "in":
-            self.data = None
-        else:
-            self.data = os.pipe()
+        self.fileObj = None
+
+
+    def __del__(self):
+        pass
+        #if self.fileObj:
+        #    os.unlink(self.fileObj)
 
 
 ##
@@ -141,13 +192,14 @@ class PrinterProcess(Process):
         for  i in inFds:
             oip = open(i, 'rb')
             if oip:
+                logger.info('PRINTER: Read from input file:')
                 while True:
                     line = oip.read()
                     if not line:
                         break
-                    print(self.name)
-                    print('\t' + '0x' + ' 0x'.join(format(b, '02x') for b in line))
-                    print('\t' + str(line))
+                    unpacked = struct.unpack('f', line)[0]
+                    logger.info('PRINTER: \t%s (%s)', unpacked, line)
+                oip.close()
 
 
 class ConstantProcess(Process):
@@ -161,10 +213,12 @@ class ConstantProcess(Process):
 
     def run(self, inFds, outFds):
         for o in outFds:
-            oop = os.fdopen(o, 'wb')
+            oop = open(o, 'wb')
             if oop:
                 data = struct.pack('f',self.constant)
+                logger.debug('Write to output file: %s (%s)', self.constant, str(data))
                 oop.write(data)
+                oop.flush()
                 oop.close()
 
 
@@ -179,7 +233,7 @@ class AdditionProcess(Process):
         valSum = 0
         print('Adding: ')
         for i in inFds:
-            iop = os.fdopen(i, 'rb')
+            iop = open(i, 'rb')
             if iop:
                 data = iop.read()
                 val = struct.unpack('f', data)[0]
@@ -189,26 +243,9 @@ class AdditionProcess(Process):
 
         print(' = ' + str(valSum))
 
-        oop = os.fdopen(outFds[0], 'wb')
+        oop = open(outFds[0], 'wb')
         if oop:
             data = struct.pack('f',valSum)
             oop.write(data)
+            oop.flush()
             oop.close()
-
-
-if __name__ == '__main__':
-    graph = ProcessingGraph()
-    node2 = ProcessingNode("node2", "add")
-    node3 = ProcessingNode("node3", "const")
-    node4 = ProcessingNode("node4", "const")
-    node5 = ProcessingNode("node5", "print")
-    node3.setParam('value', 3);
-    node4.setParam('value', 1);
-    graph.addNode(node2)
-    graph.addNode(node3)
-    graph.addNode(node4)
-    graph.addNode(node5)
-    graph.connectPorts(node3.outputPorts[0], node2.inputPorts[0])
-    graph.connectPorts(node4.outputPorts[0], node2.inputPorts[1])
-    graph.connectPorts(node2.outputPorts[0], node5.inputPorts[0])
-    graph.process(node5)
