@@ -3,6 +3,7 @@
 #import os, sys, tempfile
 import matlab.engine
 import tempfile
+import subprocess
 
 from Processing import Process
 
@@ -20,9 +21,18 @@ class MatlabProcess(Process):
         self.scriptFun(inFds, outFds, list(self.params.values()), nargout=0)
 
 
-if __name__ == '__main__':
-    mp = MatlabProcess()
+class BashProcess(Process):
+    def __init__(self):
+        self.scriptName = './bashTemplate.sh'
 
+
+    def run(self, inFds, outFds):
+        cmd = self.scriptName + ' ' + ' '.join(map(str,inFds)) + ' ' + ' '.join(map(str,outFds))
+        #cmd = self.scriptName + ' --inFds=' + ','.join(map(str,inFds)) + ' --outFds=' + ','.join(map(str,outFds))
+        subprocess.call(cmd, shell=True)
+
+
+if __name__ == '__main__':
     inFile = tempfile.SpooledTemporaryFile()
     outFile = tempfile.SpooledTemporaryFile()
 
@@ -31,4 +41,9 @@ if __name__ == '__main__':
 
     print([inFile.fileno(),outFile.fileno()])
 
-    mp.run([inFile.fileno(), 23],[outFile.fileno(), 24])
+    #mp = MatlabProcess()
+    #mp.run([inFile.fileno(), 23],[outFile.fileno(), 24])
+
+    bp = BashProcess()
+    #bp.run([inFile.fileno(), 23],[outFile.fileno(), 24])
+    bp.run([inFile.fileno()],[outFile.fileno()])
