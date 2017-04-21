@@ -27,12 +27,13 @@ class ProcessingGraph:
             startNodes = self.getSinks()
         sequence = self.topologicalSort(startNodes)
 
-        logger.info('Start processing (%d / %d nodes, %d sinks)', len(sequence), len(self.nodes), len(startNodes))
+        logger.info('Start processing (%d / %d node(s), %d sink(s))', len(sequence), len(self.nodes), len(startNodes))
         for n in reversed(sequence):
             n.process()
         logger.info('Finished processing')
 
-    def topologicalSort(self, startNodes):
+    def topologicalSort(self, startNodesRef):
+        startNodes = list(startNodesRef)
         # TODO: check for cycles by testing for leftover edges when done
         # copy the main graph structure
         pureGraph =  {n : n.getConnectedNodes() for n in self.nodes}
