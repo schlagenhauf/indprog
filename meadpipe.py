@@ -73,6 +73,14 @@ class Meadpipe(object):
         adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
         newNodeTools.insert(adderNodeItem, -1)
 
+        adderNodeItem = Gtk.ToolButton.new(None, 'Bash')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('bash', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
+        adderNodeItem = Gtk.ToolButton.new(None, 'MatLab')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('matlab', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
         self.vbox.pack_start(self.tools, False, False, 0)
 
         vsep = Gtk.VSeparator()
