@@ -92,6 +92,10 @@ class ProcessingNode:
         self.name = name
         if processType == "":
             self.proc = Process(name)
+        elif processType == "fileread":
+            self.proc = FileReadProcess(name)
+        elif processType == "filewrite":
+            self.proc = FileWriteProcess(name)
         elif processType == "const":
             self.proc = ConstantProcess(name)
         elif processType == "add":

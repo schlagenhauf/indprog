@@ -39,25 +39,58 @@ class Process(ABC):
         pass
 
 
+class FileReadProcess(Process):
+    def __init__(self, name):
+        super(FileReadProcess, self).__init__(name)
+        self.params['filename'] = './file.txt'
+
+    def getPortSpecs(self):
+        return [[],['out']]
+
+    def run(self, inFds, outFds):
+        # TODO: make this more efficient than copying one file into another
+        logger.debug('Reading file "%s"', self.params['filename'])
+        with open(self.params['filename'], 'rb') as sourceFile, open(outFds[0], 'wb') as oop:
+            for line in sourceFile:
+                oop.write(line)
+
+
+class FileWriteProcess(Process):
+    def __init__(self, name):
+        super(FileWriteProcess, self).__init__(name)
+        self.params['filename'] = './file.txt'
+        self.params['append'] = False
+
+    def getPortSpecs(self):
+        return [['in'],[]]
+
+    def run(self, inFds, outFds):
+        # TODO: make this more efficient than copying one file into another
+        logger.debug('Writing file "%s"', self.params['filename'])
+        mode = 'wb' if self.params['append'] else 'ab'
+        with open(self.params['filename'], mode) as sinkFile, open(inFds[0], 'rb') as iop:
+            for line in iop:
+                sinkFile.write(line)
+
+
 class PrinterProcess(Process):
     def __init__(self, name):
         super(PrinterProcess, self).__init__(name)
+        self.params['encoding'] = 'ascii'
 
     def getPortSpecs(self):
         return [['in'],[]]
 
     def run(self, inFds, outFds):
         for  i in inFds:
-            oip = open(i, 'rb')
-            if oip:
+            with open(i, 'rb') as oip:
                 logger.info('PRINTER: Read from input file:')
                 while True:
                     line = oip.read()
                     if not line:
                         break
-                    unpacked = struct.unpack('f', line)[0]
-                    logger.info('PRINTER: \t%s (%s)', unpacked, line)
-                oip.close()
+                    string = line.decode(self.params['encoding'])
+                    logger.info('PRINTER: \t%s (%s)', string, line)
 
 
 class ConstantProcess(Process):
@@ -129,10 +162,15 @@ class MatlabProcess(Process):
 class BashProcess(Process):
     def __init__(self, name):
         super(BashProcess, self).__init__(name)
-        self.scriptName = './bashTemplate.sh'
-        bashProc = subprocess.Popen(self.scriptName, shell=True, stdout=subprocess.PIPE)
-        portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
-        self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
+        self.scriptName = './bashTemplate.bash'
+        try:
+            bashProc = subprocess.Popen(self.scriptName, shell=True, stdout=subprocess.PIPE)
+            portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
+            self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
+        except:
+            logger.error('Failed to get port specs from bash script. Make sure that your script echoes \
+                    a list of ports in the form in1,...,inN out1,...,outM when executed without arguments')
+            self.portSpecs = [[],[]]
 
 
     def run(self, inFds, outFds):
