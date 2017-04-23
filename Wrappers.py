@@ -133,11 +133,9 @@ class BashProcess(Process):
         bashProc = subprocess.Popen(self.scriptName, shell=True, stdout=subprocess.PIPE)
         portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
         self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
-        print(self.portSpecs)
 
 
     def run(self, inFds, outFds):
-        cmd = self.scriptName + ' --inFds=' + ','.join(inFds) + ' --outFds=' + ','.join(outFds)
-        #bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        #print(bashProc.stdout.readline())
-        #subprocess.call(cmd, shell=True)
+        cmd = self.scriptName + ' ' + ','.join(inFds) + ' ' + ','.join(outFds)
+        bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        print(bashProc.stdout.read())
