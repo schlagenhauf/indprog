@@ -53,6 +53,12 @@ class Meadpipe(object):
         generalTools = Gtk.ToolItemGroup.new('General')
         self.tools.add(generalTools)
 
+        runItem = Gtk.ToolButton.new(None, 'Load')
+        generalTools.insert(runItem, -1)
+
+        runItem = Gtk.ToolButton.new(None, 'Save')
+        generalTools.insert(runItem, -1)
+
         runItem = Gtk.ToolButton.new(None, 'Run')
         runItem.connect("clicked", self.__executeGraph)
         generalTools.insert(runItem, -1)
@@ -60,6 +66,14 @@ class Meadpipe(object):
         # node functions
         newNodeTools = Gtk.ToolItemGroup.new('New Node')
         self.tools.add(newNodeTools)
+
+        constNodeItem = Gtk.ToolButton.new(None, 'FileRead')
+        constNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('fileread', w, d))
+        newNodeTools.insert(constNodeItem, -1)
+
+        constNodeItem = Gtk.ToolButton.new(None, 'FileWrite')
+        constNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('filewrite', w, d))
+        newNodeTools.insert(constNodeItem, -1)
 
         constNodeItem = Gtk.ToolButton.new(None, 'Constant')
         constNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('const', w, d))
@@ -71,6 +85,14 @@ class Meadpipe(object):
 
         adderNodeItem = Gtk.ToolButton.new(None, 'Adder')
         adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('add', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
+        adderNodeItem = Gtk.ToolButton.new(None, 'Bash')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('bash', w, d))
+        newNodeTools.insert(adderNodeItem, -1)
+
+        adderNodeItem = Gtk.ToolButton.new(None, 'MatLab')
+        adderNodeItem.connect("clicked", lambda w = None, d = None: self.__createNode('matlab', w, d))
         newNodeTools.insert(adderNodeItem, -1)
 
         self.vbox.pack_start(self.tools, False, False, 0)
