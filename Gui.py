@@ -8,9 +8,17 @@ from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import GFlow
 from gi.repository import GtkFlow
+from gi.repository.Gdk import Color
+from gi.repository import Gdk
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class FlowGuiNode(GFlow.SimpleNode):
+    #COLOR_INVALID = Gdk.RGBA(255,0,0)
+    COLOR_INVALID = Color(50000, 0, 0)
+
     def __new__(cls, *args, **kwargs):
         x = GFlow.SimpleNode.new()
         x.__class__ = cls
@@ -25,6 +33,8 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.generateParamBox()
 
+    def __del__(self):
+        logger.critical('DTOR not implemented!')
 
     def generateParamBox(self):
         if len(self.procNode.getParams()) == 0:
@@ -42,6 +52,8 @@ class FlowGuiNode(GFlow.SimpleNode):
             label = Gtk.Label(k)
             hbox.pack_start(label, True, True, 0)
             entry = Gtk.Entry()
+            entry.set_text(str(v))
+            entry.connect('changed', lambda w=None, d=None: self.__paramChanged(k,entry))
             hbox.pack_start(entry, True, True, 0)
             row = Gtk.ListBoxRow()
             row.add(hbox)
@@ -68,10 +80,16 @@ class FlowGuiNode(GFlow.SimpleNode):
     def setParams(self, paramDict):
         pass
 
+    def __paramChanged(self, key, gtkEntry):
+        valStr = gtkEntry.get_text()
+        try:
+            val = type(self.procNode.getParam(key))(valStr)
+            self.procNode.setParam(key, val)
+            #gtkEntry.modify_base(Gtk.StateFlags.NORMAL, None)
+        except (TypeError, ValueError) as e:
+            #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)
+            logger.error('Incompatible type (must be %s)', str(type(self.procNode.getParam(key))))
 
-    def __paramChanged(self, widget=None, data=None):
-        pass
-        #self.source.set_value(self.entry.get_text())
 
     def __sourceLinked(self, sourceDock, sinkDock):
         sinkName = sinkDock.get_name()

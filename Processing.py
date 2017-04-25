@@ -4,10 +4,11 @@ from abc import ABC, abstractmethod
 import uuid
 import tempfile
 import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 from Wrappers import *
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class ProcessingGraph:
     def __init__(self):
@@ -112,6 +113,9 @@ class ProcessingNode:
         self.inputPorts = {ip : Port(self, ip, 'in') for ip in portSpecs[0]}
         self.outputPorts = {op : Port(self, op, 'out') for op in portSpecs[1]}
 
+    def getParam(self, key):
+        return self.proc.params[key]
+
     def getParams(self):
         return self.proc.getParams()
 
@@ -119,8 +123,8 @@ class ProcessingNode:
     # @brief Sets parameter <name> to value <value>
     # This method does not create new parameters.
     def setParam(self, name, value):
-        if name in self.parameters:
-            self.parameters[name] = value
+        if name in self.proc.params:
+            self.proc.params[name] = value
             return True
         else:
             return False
@@ -134,7 +138,7 @@ class ProcessingNode:
         inFiles = [inPort.fileObj.name if inPort.fileObj else None for inPort in self.inputPorts.values()]
         outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
         if all(inFiles) and all(outFiles):
-            logger.debug('Executing process')
+            logger.debug('Executing process "%s"', self.name)
             self.proc.run(inFiles, outFiles)
         else:
             logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
