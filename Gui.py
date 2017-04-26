@@ -31,6 +31,8 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.set_name(procNode.name)
 
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        label = Gtk.Label.new(procNode.name)
+        self.vbox.pack_start(label, False, False, 0)
         self.generateParamBox()
 
     def __del__(self):
@@ -41,7 +43,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             return
 
         sep = Gtk.Separator.new(Gtk.Orientation.HORIZONTAL)
-        self.vbox.pack_start(sep, True, True, 0)
+        self.vbox.pack_start(sep, False, False, 0)
 
         self.expander = Gtk.Expander.new('Parameters')
         self.expander.set_resize_toplevel(True)
@@ -53,7 +55,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             hbox.pack_start(label, True, True, 0)
             entry = Gtk.Entry()
             entry.set_text(str(v))
-            entry.connect('changed', lambda w=None, d=None: self.__paramChanged(k,entry))
+            entry.connect('changed', lambda w=None, d=None: self.__paramChanged(w, k))
             hbox.pack_start(entry, True, True, 0)
             row = Gtk.ListBoxRow()
             row.add(hbox)
@@ -80,11 +82,12 @@ class FlowGuiNode(GFlow.SimpleNode):
     def setParams(self, paramDict):
         pass
 
-    def __paramChanged(self, key, gtkEntry):
+    def __paramChanged(self, gtkEntry, key):
         valStr = gtkEntry.get_text()
         try:
             val = type(self.procNode.getParam(key))(valStr)
             self.procNode.setParam(key, val)
+            logger.debug('Changing parameter "%s" to value "%s"', key, val)
             #gtkEntry.modify_base(Gtk.StateFlags.NORMAL, None)
         except (TypeError, ValueError) as e:
             #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)

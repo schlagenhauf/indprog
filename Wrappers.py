@@ -96,8 +96,8 @@ class PrinterProcess(Process):
 class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
-        self.constant = 9.0
-        self.params = {'value': 1}
+        self.params['value'] = 1
+        self.params['encoding'] = 'ascii'
 
     def getPortSpecs(self):
         return [[],['out']]
@@ -106,8 +106,8 @@ class ConstantProcess(Process):
         for o in outFds:
             oop = open(o, 'wb')
             if oop:
-                data = struct.pack('f',self.constant)
-                logger.debug('Write to output file: %s (%s)', self.constant, str(data))
+                data = str(self.params['value']).encode(self.params['encoding'])
+                logger.debug('Write to output file: %s (%s)', self.params['value'], str(data))
                 oop.write(data)
                 oop.flush()
                 oop.close()
