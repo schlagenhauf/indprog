@@ -196,9 +196,9 @@ class MatlabProcess(Process):
 class BashProcess(Process):
     def __init__(self, name):
         super(BashProcess, self).__init__(name)
-        self.scriptName = './bashTemplate.bash'
+        self.params['filename'] = './bashTemplate.bash'
         try:
-            bashProc = subprocess.Popen(self.scriptName, shell=True, stdout=subprocess.PIPE)
+            bashProc = subprocess.Popen(self.params['filename'], shell=True, stdout=subprocess.PIPE)
             portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
             self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
         except:
@@ -208,6 +208,6 @@ class BashProcess(Process):
 
 
     def run(self, inFds, outFds):
-        cmd = self.scriptName + ' ' + ','.join(inFds) + ' ' + ','.join(outFds)
+        cmd = self.params['filename'] + ' ' + ','.join(inFds) + ' ' + ','.join(outFds)
         bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
         print(bashProc.stdout.read())
