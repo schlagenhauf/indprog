@@ -110,10 +110,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.logLevel:
-        logging.basicConfig(
-                level=logging.getLevelName(args.logLevel),
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt="%H:%M:%S", stream=sys.stdout)
+        lvl = level=logging.getLevelName(args.logLevel),
+    else:
+        lvl = logging.WARNING
+
+    logging.basicConfig(
+            level=lvl,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt="%H:%M:%S", stream=sys.stdout)
 
     logger.info('Starting...')
     mp = Meadpipe()
