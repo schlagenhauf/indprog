@@ -58,7 +58,8 @@ class FileWriteProcess(Process):
     def __init__(self, name):
         super(FileWriteProcess, self).__init__(name)
         self.params['filename'] = './file.txt'
-        self.params['append'] = False
+        self.params['append'] = True
+        self.params['encoding'] = 'None'
 
     def getPortSpecs(self):
         return [['in'],[]]
@@ -66,10 +67,27 @@ class FileWriteProcess(Process):
     def run(self, inFds, outFds):
         # TODO: make this more efficient than copying one file into another
         logger.debug('Writing file "%s"', self.params['filename'])
-        mode = 'wb' if self.params['append'] else 'ab'
+        mode = 'a' if self.params['append'] else 'w'
+
+        enc = self.params['encoding']
+
+        binary = False
+        if enc == '' or enc == 'None':
+            mode += 'b'
+            binary = True
+        else:
+            try:
+                codecs.lookup(enc)
+            except LookupError:
+                enc = 'ascii'
+                logger.error('Encoding %s not available, falling back to %s' % (self.params['encoding'], enc))
+
         with open(self.params['filename'], mode) as sinkFile, open(inFds[0], 'rb') as iop:
             for line in iop:
-                sinkFile.write(line)
+                if binary:
+                    sinkFile.write(line)
+                else:
+                    sinkFile.write(line.decode(enc))
 
 
 class PrinterProcess(Process):
