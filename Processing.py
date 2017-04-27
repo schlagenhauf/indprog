@@ -77,17 +77,26 @@ class ProcessingNode:
 
     @classmethod
     def disconnectPorts(self, portFrom, portTo):
+        names = (portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
         try:
             portFrom.connectedTo.remove(portTo)
             portTo.connectedTo.remove(portFrom)
-            portFrom.fileObj.close()
             portTo.fileObj.close()
-            os.unlink(portFrom.name)
-        except Exception as e:
-            logger.error('Failed to disconnect [%s:%s] =x= [%s:%s]: %s', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name, e.message)
+            portTo.fileObj = None
 
-        logger.debug('Disconnected [%s:%s] =x= [%s:%s]', portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
-        return False
+            # if no sink ports are connected anymore, close the file
+            if not portFrom.connectedTo:
+                portFrom.fileObj.close()
+                os.remove(portFrom.fileObj.name)
+                portFrom.fileObj = None
+
+        except Exception as e:
+            logger.critical('Failed to disconnect [%s:%s] =x= [%s:%s]', *names)
+            logger.exception(e)
+            return False
+
+        logger.debug('Disconnected [%s:%s] =x= [%s:%s]', *(names))
+        return True
 
     def __init__(self, name, processType):
         self.name = name
