@@ -78,6 +78,9 @@ class ProcessingNode:
     def disconnectPorts(self, portFrom, portTo):
         names = (portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
         try:
+            logger.debug('PortFrom: ' + str(portFrom))
+            logger.debug('PortTo: ' + str(portTo))
+
             portFrom.connectedTo.remove(portTo)
             portTo.connectedTo.remove(portFrom)
             portTo.fileObj.close()
@@ -151,6 +154,9 @@ class ProcessingNode:
         else:
             logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
 
+    def __str__(self):
+        return 'Processing Node "%s", %d input ports, %d output ports' % (self.name, len(self.inputPorts), len(self.outputPorts))
+
 
 ##
 # @brief A port represents one of possibly many inputs or outputs of a node.
@@ -169,3 +175,9 @@ class Port:
         pass
         #if self.fileObj:
         #    os.unlink(self.fileObj)
+
+    def __str__(self):
+        foName = self.fileObj.name if self.fileObj else str(None)
+        return 'Port "%s", parent node: "%s", direction: %s, tempfile name: %s, %d connections: %s' \
+                % (self.name, self.node.name, self.direction, foName, len(self.connectedTo), \
+                str([p.name for p in self.connectedTo]))

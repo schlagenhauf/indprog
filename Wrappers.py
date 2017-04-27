@@ -3,6 +3,7 @@
 
 import subprocess
 import struct
+import codecs
 from abc import ABC, abstractmethod
 import logging
 logger = logging.getLogger(__name__)
@@ -87,14 +88,22 @@ class PrinterProcess(Process):
                     line = oip.read()
                     if not line:
                         break
-                    string = line.decode(self.params['encoding'])
+
+                    enc = self.params['encoding']
+                    try:
+                        codecs.lookup(enc)
+                    except LookupError:
+                        enc = 'ascii'
+                        logger.error('Encoding %s not available, falling back to %s' % (self.params['encoding'], enc))
+
+                    string = line.decode(enc)
                     logger.info('PRINTER: \t%s (%s)', string, line)
 
 
 class ConstantProcess(Process):
     def __init__(self, name):
         super(ConstantProcess, self).__init__(name)
-        self.params['value'] = 1
+        self.params['value'] = "text"
         self.params['encoding'] = 'ascii'
 
     def getPortSpecs(self):
@@ -104,7 +113,16 @@ class ConstantProcess(Process):
         for o in outFds:
             oop = open(o, 'wb')
             if oop:
-                data = str(self.params['value']).encode(self.params['encoding'])
+
+                enc = self.params['encoding']
+                try:
+                    codecs.lookup(enc)
+                except LookupError:
+                    enc = 'ascii'
+                    logger.error('Encoding %s not available, falling back to %s' % (self.params['encoding'], enc))
+
+                data = str(self.params['value']).encode(enc)
+
                 logger.debug('Write to output file: %s (%s)', self.params['value'], str(data))
                 oop.write(data)
                 oop.flush()

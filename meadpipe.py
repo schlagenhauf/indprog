@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.logLevel:
-        lvl = level=logging.getLevelName(args.logLevel),
+        lvl = logging.getLevelName(args.logLevel)
     else:
         lvl = logging.WARNING
 
