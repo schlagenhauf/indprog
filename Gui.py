@@ -55,7 +55,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             hbox.pack_start(label, True, True, 0)
             entry = Gtk.Entry()
             entry.set_text(str(v))
-            entry.connect('changed', lambda w=None, d=None: self.__paramChanged(w, k))
+            entry.connect('changed', lambda w, d=None, key=k: self.__paramChanged(w, key))
             hbox.pack_start(entry, True, True, 0)
             row = Gtk.ListBoxRow()
             row.add(hbox)
@@ -86,12 +86,14 @@ class FlowGuiNode(GFlow.SimpleNode):
         valStr = gtkEntry.get_text()
         try:
             val = type(self.procNode.getParam(key))(valStr)
-            self.procNode.setParam(key, val)
-            logger.debug('Changing parameter "%s" to value "%s"', key, val)
+            if self.procNode.setParam(key, val):
+                logger.debug('Changing parameter "%s" to value "%s"', key, val)
+            else:
+                logger.error('Failed to change parameter "%s" to value "%s"', key, val)
             #gtkEntry.modify_base(Gtk.StateFlags.NORMAL, None)
         except (TypeError, ValueError) as e:
             #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)
-            logger.error('Incompatible type (must be %s)', str(type(self.procNode.getParam(key))))
+            logger.error('Incompatible type for parameter "%s" (must be %s)', key, str(type(self.procNode.getParam(key))))
 
 
     def __sourceLinked(self, sourceDock, sinkDock):
