@@ -51,9 +51,12 @@ class FlowGuiNode(GFlow.SimpleNode):
         for k,v in self.procNode.getParams().items():
             hbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)
             label = Gtk.Label(k)
+            label.set_xalign(0)
             hbox.pack_start(label, True, True, 0)
             entry = Gtk.Entry()
             entry.set_text(str(v))
+            entry.set_alignment(1)
+            entry.set_has_frame(False)
             entry.connect('changed', lambda w, d=None, key=k: self.__paramChanged(w, key))
             hbox.pack_start(entry, True, True, 0)
             row = Gtk.ListBoxRow()
