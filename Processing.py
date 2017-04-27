@@ -8,7 +8,6 @@ import logging
 from Wrappers import *
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class ProcessingGraph:
     def __init__(self):

@@ -6,8 +6,6 @@ import struct
 from abc import ABC, abstractmethod
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 
 
 ##

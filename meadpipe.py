@@ -10,15 +10,11 @@ from gi.repository import GFlow
 from gi.repository import GtkFlow
 
 import sys
+import argparse
 
 import logging
-logging.basicConfig(
-        level=logging.DEBUG,
-        format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-        datefmt="%H:%M:%S", stream=sys.stdout)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
@@ -108,6 +104,17 @@ class Meadpipe(object):
         Gtk.main()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--log", dest="logLevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], \
+            help="Set the logging level")
+
+    args = parser.parse_args()
+    if args.logLevel:
+        logging.basicConfig(
+                level=logging.getLevelName(args.logLevel),
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt="%H:%M:%S", stream=sys.stdout)
+
     logger.info('Starting...')
     mp = Meadpipe()
     mp.run()

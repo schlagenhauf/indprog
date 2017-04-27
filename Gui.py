@@ -13,7 +13,6 @@ from gi.repository import Gdk
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class FlowGuiNode(GFlow.SimpleNode):
     #COLOR_INVALID = Gdk.RGBA(255,0,0)
