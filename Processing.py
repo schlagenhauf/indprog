@@ -40,7 +40,8 @@ class ProcessingGraph:
         sequence = []
         while startNodes:
             n = startNodes.pop()
-            sequence.append(n)
+            if not n.upToDate():
+                sequence.append(n)
             for pn in pureGraph[n][0]:
                 pureGraph[pn][1].remove(n)
                 if len(pureGraph[pn][1]) == 0:
@@ -130,6 +131,11 @@ class ProcessingNode:
     def getParams(self):
         return self.proc.getParams()
 
+    def upToDate(self):
+        return all([p.upToDate() for p in self.inputPorts.values()]) \
+                and all([p.upToDate() for p in self.outputPorts.values()]) \
+                and self.process.upToDate()
+
     ##
     # @brief Sets parameter <name> to value <value>
     # This method does not create new parameters.
@@ -175,6 +181,9 @@ class Port:
         pass
         #if self.fileObj:
         #    os.unlink(self.fileObj)
+
+    def upToDate(self):
+        return False
 
     def __str__(self):
         foName = self.fileObj.name if self.fileObj else str(None)

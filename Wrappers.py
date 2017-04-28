@@ -34,6 +34,9 @@ class Process(ABC):
     def getParams(self):
         return self.params
 
+    def upToDate(self):
+        return False
+
     @abstractmethod
     def run(self, inFds, outFds):
         pass

@@ -26,7 +26,7 @@ IFS=',' read -r -a outFiles <<< "$2"
 #done
 
 # a sample functionality
-cat ${inFiles[0]} > ${outFiles[0]}
+cat ${inFiles[0]} | tr 'e' '$' > ${outFiles[0]}
 
 # otherwise, print the usage information
 else
