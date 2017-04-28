@@ -20,7 +20,7 @@ To run the GUI (and there is no CLI-only version right now), you need
 
 **Note:** If you have trouble building libgtkflow, you might have a Gtk version < 3.20 (see [this
 issue](https://github.com/grindhold/libgtkflow/issues/60) ). If you are using Ubuntu 16.04, checking
-out commit 93f3445a53cfaa141122e14c1aa4bf107f342224 will solve this.
+out commit https://github.com/grindhold/libgtkflow/commit/93f3445a53cfaa141122e14c1aa4bf107f342224 will solve this.
 
 ## MatLab Bindings
 To use MatLab processing nodes, you need the [python bindings for
