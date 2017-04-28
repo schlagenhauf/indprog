@@ -133,7 +133,6 @@ class ProcessingNode:
 
     def upToDate(self):
         return all([p.upToDate() for p in self.inputPorts.values()]) \
-                and all([p.upToDate() for p in self.outputPorts.values()]) \
                 and self.process.upToDate()
 
     ##
