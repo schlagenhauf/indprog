@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 import logging
 logger = logging.getLogger(__name__)
 
+from SecureFileOps import *
 
 ##
 # @brief Wrapper for the process that a node represents. Can wrap a variety of actions.
@@ -49,9 +50,13 @@ class FileReadProcess(Process):
     def run(self, inFds, outFds):
         # TODO: make this more efficient than copying one file into another
         logger.debug('Reading file "%s"', self.params['filename'])
-        with open(self.params['filename'], 'rb') as sourceFile, open(outFds[0], 'wb') as oop:
-            for line in sourceFile:
-                oop.write(line)
+
+        data = secureFileRead(self.params['filename'], 'rb')
+        if not data:
+            return
+
+        with open(outFds[0], 'wb') as oop:
+            oop.write(data)
 
 
 class FileWriteProcess(Process):
