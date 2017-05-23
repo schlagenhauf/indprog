@@ -50,6 +50,12 @@ class ProcessingGraph:
 
         return sequence
 
+    def saveToFile(self, path):
+        pass
+
+    def loadFromFile(self, path):
+        pass
+
 
 ##
 # @brief A node bundles a process with input and output ports.

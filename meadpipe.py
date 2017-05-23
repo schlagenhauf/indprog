@@ -39,6 +39,25 @@ class Meadpipe(object):
         node = self.procGraph.createNode('node_' + nodeType, nodeType)
         self.fgui.createFlowNode(node)
 
+    def __loadGraph(self, widget=None, data=None):
+        dialog = Gtk.FileChooserDialog('Load Graph From File', self.w,
+                Gtk.FileChooserAction.OPEN,
+                (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                 Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            print("Open clicked")
+            print("File selected: " + dialog.get_filename())
+        elif response == Gtk.ResponseType.CANCEL \
+            or response == Gtk.ResponseType.CLOSE \
+            or response == Gtk.ResponseType.DELETE_EVENT:
+            print("Cancel clicked")
+
+        dialog.destroy()
+
+    def __saveGraph(self, widget=None, data=None):
+        print('blasave')
+
     def __executeGraph(self, widget=None, data=None):
         self.procGraph.process()
 
@@ -49,11 +68,13 @@ class Meadpipe(object):
         generalTools = Gtk.ToolItemGroup.new('General')
         self.tools.add(generalTools)
 
-        runItem = Gtk.ToolButton.new(None, 'Load')
-        generalTools.insert(runItem, -1)
+        loadItem = Gtk.ToolButton.new(None, 'Load')
+        loadItem.connect("clicked", self.__loadGraph)
+        generalTools.insert(loadItem, -1)
 
-        runItem = Gtk.ToolButton.new(None, 'Save')
-        generalTools.insert(runItem, -1)
+        saveItem = Gtk.ToolButton.new(None, 'Save')
+        saveItem.connect("clicked", self.__saveGraph)
+        generalTools.insert(saveItem, -1)
 
         runItem = Gtk.ToolButton.new(None, 'Run')
         runItem.connect("clicked", self.__executeGraph)
