@@ -1,7 +1,7 @@
-# meadpipe
-a MEAsurement Data PIPEline
+# indprog
+an INteractive Data PROcessing Graph
 
-meadpipe allows you to process data via a processing graph, where the nodes represent a processing
+indproc allows you to process data via a processing graph, where the nodes represent a processing
 step and the edges represent the piping to move data from one process to the next.
 
 A graphical interface allows to visually create and maintain a processing scenario, with the option
@@ -27,9 +27,9 @@ To use MatLab processing nodes, you need the [python bindings for
 MatLab](https://de.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
 
 
-## Meadpipe
+## indprog
 
-Meadpipe itself does not need any installation, just run it.
+indprog itself does not need any installation, just run it.
 
 For a list of available command line arguments, open the help via
-```./meadpipe.py -h```
+```./indprog.py -h```

@@ -139,7 +139,7 @@ class ProcessingNode:
 
     def upToDate(self):
         return all([p.upToDate() for p in self.inputPorts.values()]) \
-                and self.process.upToDate()
+                and self.proc.upToDate()
 
     ##
     # @brief Sets parameter <name> to value <value>

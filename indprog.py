@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
 
-class Meadpipe(object):
+class Indprog(object):
     def __init__(self):
         self.w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
         self.w.connect("destroy", self.__quit)
@@ -141,6 +141,6 @@ if __name__ == '__main__':
             datefmt="%H:%M:%S", stream=sys.stdout)
 
     logger.info('Starting...')
-    mp = Meadpipe()
+    mp = Indprog()
     mp.run()
     logger.info('Quitting')
