@@ -31,6 +31,8 @@ class Indprog(object):
         self.fgui = FlowGui(self.w, self.vbox)
         self.procGraph = ProcessingGraph()
 
+        self.unsavedChanges = False
+
     def __quit(self, widget=None, data=None):
         Gtk.main_quit()
         sys.exit(0)
@@ -45,18 +47,47 @@ class Indprog(object):
                 (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                  Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
         response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            print("Open clicked")
-            print("File selected: " + dialog.get_filename())
-        elif response == Gtk.ResponseType.CANCEL \
-            or response == Gtk.ResponseType.CLOSE \
-            or response == Gtk.ResponseType.DELETE_EVENT:
-            print("Cancel clicked")
-
+        filename = dialog.get_filename()
         dialog.destroy()
 
+        if response == Gtk.ResponseType.OK:
+            logger.debug('Graph file opened: ' + filename)
+            # TODO: check if there are unsaved changes that would be overwritten
+
+            if not self.unsavedChanges:
+                self.procGraph.loadFromFile(filename)
+            else:
+                # unsaved changes. ask if user wants to save first, discard or cancel
+                pass
+
+            # TODO: update gui nodes
+
+        #elif response == Gtk.ResponseType.CANCEL \
+        #    or response == Gtk.ResponseType.CLOSE \
+        #    or response == Gtk.ResponseType.DELETE_EVENT:
+        #    print("Cancel clicked")
+
+
     def __saveGraph(self, widget=None, data=None):
-        print('blasave')
+        dialog = Gtk.FileChooserDialog('Save Graph To File', self.w,
+                Gtk.FileChooserAction.SAVE,
+                (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                 Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
+        response = dialog.run()
+        filename = dialog.get_filename()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            logger.debug('Graph file saved: ' + filename)
+            # TODO: check if there is something to save
+
+            self.procGraph.saveToFile(filename)
+
+        #elif response == Gtk.ResponseType.CANCEL \
+        #    or response == Gtk.ResponseType.CLOSE \
+        #    or response == Gtk.ResponseType.DELETE_EVENT:
+        #    print("Cancel clicked")
+
 
     def __executeGraph(self, widget=None, data=None):
         self.procGraph.process()

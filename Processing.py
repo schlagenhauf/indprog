@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 import uuid
 import tempfile
 import logging
+import xml.etree.cElementTree as ET
+from xml.dom import minidom
 
 from Wrappers import *
 
@@ -51,7 +53,36 @@ class ProcessingGraph:
         return sequence
 
     def saveToFile(self, path):
-        pass
+        # save as XML. required values are attributes, optional values are content
+        portIdCounter = 0;
+        root = ET.Element('graph')
+
+        for n in self.nodes:
+            xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.proc.name)
+
+            xmlparams = ET.SubElement(xmlnode, 'parameters')
+            for pk, pv in n.getParams().items():
+                ET.SubElement(xmlnode, 'parameters')
+
+
+            for op in n.outputPorts.values():
+                if op.id < 0:
+                    op.id = portIdCounter
+                    portIdCounter += 1
+
+                xmlport = ET.SubElement(xmlnode, 'outport', name=op.name, id=str(op.id))
+                for to in op.connectedTo:
+                    if to.id < 0:
+                        to.id = portIdCounter
+                        portIdCounter += 1
+                    ET.SubElement(xmlport, 'connectedto', id=str(to.id))
+
+
+        xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="\t")
+
+        print(xmlstr)
+
+
 
     def loadFromFile(self, path):
         pass
@@ -180,6 +211,8 @@ class Port:
         self.connectedTo = set()
 
         self.fileObj = None
+
+        self.id = -1 # for saving / loading
 
 
     def __del__(self):
