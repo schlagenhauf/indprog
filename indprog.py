@@ -22,7 +22,8 @@ from Gui import FlowGui
 class Indprog(object):
     def __init__(self):
         self.w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
-        self.w.connect("destroy", self.__quit)
+        self.w.set_title('indprog');
+        self.w.connect('delete-event', self.__quit)
         self.vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
         self.w.add(self.vbox)
 
@@ -31,15 +32,26 @@ class Indprog(object):
         self.fgui = FlowGui(self.w, self.vbox)
         self.procGraph = ProcessingGraph()
 
-        self.unsavedChanges = False
+        self.setUnsavedChanges(False)
 
     def __quit(self, widget=None, data=None):
+        if self.unsavedChanges:
+            diag = Gtk.MessageDialog(self.w, 0,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, 'You have unsaved changes. Really quit?')
+            response = diag.run()
+            diag.destroy()
+            if response != Gtk.ResponseType.YES:
+                return True
+
+        # if no unsavedChanges or response is YES, quit
+        logger.info('Closing window');
         Gtk.main_quit()
-        sys.exit(0)
+        return False
 
     def __createNode(self, nodeType, widget=None, data=None):
         node = self.procGraph.createNode('node_' + nodeType, nodeType)
         self.fgui.createFlowNode(node)
+        self.setUnsavedChanges(True)
 
     def __loadGraph(self, widget=None, data=None):
         dialog = Gtk.FileChooserDialog('Load Graph From File', self.w,
@@ -62,11 +74,6 @@ class Indprog(object):
 
             # TODO: update gui nodes
 
-        #elif response == Gtk.ResponseType.CANCEL \
-        #    or response == Gtk.ResponseType.CLOSE \
-        #    or response == Gtk.ResponseType.DELETE_EVENT:
-        #    print("Cancel clicked")
-
 
     def __saveGraph(self, widget=None, data=None):
         dialog = Gtk.FileChooserDialog('Save Graph To File', self.w,
@@ -78,15 +85,23 @@ class Indprog(object):
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
-            logger.debug('Graph file saved: ' + filename)
-            # TODO: check if there is something to save
-
             self.procGraph.saveToFile(filename)
+            self.setUnsavedChanges(False)
+            logger.debug('Graph file saved: ' + filename)
 
         #elif response == Gtk.ResponseType.CANCEL \
         #    or response == Gtk.ResponseType.CLOSE \
         #    or response == Gtk.ResponseType.DELETE_EVENT:
         #    print("Cancel clicked")
+
+
+    def setUnsavedChanges(self, uc):
+        self.unsavedChanges = uc
+        if self.unsavedChanges:
+            self.w.set_title('*indprog')
+        else:
+            self.w.set_title('indprog')
+
 
 
     def __executeGraph(self, widget=None, data=None):
