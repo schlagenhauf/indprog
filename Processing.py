@@ -52,40 +52,51 @@ class ProcessingGraph:
 
         return sequence
 
-    def saveToFile(self, path):
-        # save as XML. required values are attributes, optional values are content
+
+    def generateUniquePortIds(self):
         portIdCounter = 0;
+        for n in self.nodes:
+            for ik in n.inputPorts.keys():
+                n.inputPorts[ik].id = portIdCounter;
+                portIdCounter += 1;
+
+            for ok in n.outputPorts.keys():
+                n.outputPorts[ok].id = portIdCounter;
+                portIdCounter += 1;
+
+
+    def saveToFile(self, path):
+        self.generateUniquePortIds();
+
+        # save as XML. required values are attributes, optional values are content
         root = ET.Element('graph')
 
         for n in self.nodes:
             xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.proc.name)
 
-            xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
-                ET.SubElement(xmlnode, 'parameters')
+                ET.SubElement(xmlnode, 'parameter', key=pk, value=pv)
 
+            for ip in n.inputPorts.values():
+                xmlport = ET.SubElement(xmlnode, 'inport', name=ip.name, id=str(ip.id))
 
             for op in n.outputPorts.values():
-                if op.id < 0:
-                    op.id = portIdCounter
-                    portIdCounter += 1
-
                 xmlport = ET.SubElement(xmlnode, 'outport', name=op.name, id=str(op.id))
                 for to in op.connectedTo:
-                    if to.id < 0:
-                        to.id = portIdCounter
-                        portIdCounter += 1
                     ET.SubElement(xmlport, 'connectedto', id=str(to.id))
 
 
         xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="\t")
 
-        print(xmlstr)
-
+        with open(path, 'w') as f:
+            f.write(xmlstr)
 
 
     def loadFromFile(self, path):
-        pass
+        with open(path, 'r') as f:
+            xmlstr = f.read()
+
+            print (xmlstr)
 
 
 ##
