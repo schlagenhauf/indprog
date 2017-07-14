@@ -54,34 +54,36 @@ class ProcessingGraph:
 
 
     def generateUniquePortIds(self):
-        portIdCounter = 0;
+        portIdCounter = 0
         for n in self.nodes:
             for ik in n.inputPorts.keys():
-                n.inputPorts[ik].id = portIdCounter;
-                portIdCounter += 1;
+                n.inputPorts[ik].id = portIdCounter
+                portIdCounter += 1
 
             for ok in n.outputPorts.keys():
-                n.outputPorts[ok].id = portIdCounter;
-                portIdCounter += 1;
+                n.outputPorts[ok].id = portIdCounter
+                portIdCounter += 1
 
 
     def saveToFile(self, path):
-        self.generateUniquePortIds();
+        self.generateUniquePortIds()
 
         # save as XML. required values are attributes, optional values are content
         root = ET.Element('graph')
 
         for n in self.nodes:
-            xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.proc.name)
+            xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.procType)
 
+            xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
-                ET.SubElement(xmlnode, 'parameter', key=pk, value=pv)
+                ET.SubElement(xmlparams, 'parameter', key=pk, value=pv)
 
+            xmlports = ET.SubElement(xmlnode, 'ports')
             for ip in n.inputPorts.values():
-                xmlport = ET.SubElement(xmlnode, 'inport', name=ip.name, id=str(ip.id))
+                xmlport = ET.SubElement(xmlports, 'inport', name=ip.name, id=str(ip.id))
 
             for op in n.outputPorts.values():
-                xmlport = ET.SubElement(xmlnode, 'outport', name=op.name, id=str(op.id))
+                xmlport = ET.SubElement(xmlports, 'outport', name=op.name, id=str(op.id))
                 for to in op.connectedTo:
                     ET.SubElement(xmlport, 'connectedto', id=str(to.id))
 
@@ -93,10 +95,49 @@ class ProcessingGraph:
 
 
     def loadFromFile(self, path):
+        self.nodes = [] # TODO: check if circular refs slow down deletion
+
         with open(path, 'r') as f:
             xmlstr = f.read()
+            root = ET.fromstring(xmlstr)
 
-            print (xmlstr)
+            # map from ID to port object
+            portMap = {}
+            connections = [];
+
+            # set up nodes
+            for xmlnode in root:
+                procNode = self.createNode(xmlnode.attrib['name'], xmlnode.attrib['type'])
+
+                # delete ports created by process TODO: don't delete, try to match
+                procNode.outputPorts = {}
+                procNode.inputPorts = {}
+
+                for po in xmlnode.find('ports'):
+                    if po.tag == 'outport':
+                        pname = po.attrib['name']
+                        procNode.outputPorts[pname] = Port(procNode, pname, 'out')
+                        procNode.outputPorts[pname].id = po.attrib['id']
+                        portMap[po.attrib['id']] = procNode.outputPorts[pname]
+                        for con in po:
+                            connections.append((po.attrib['id'], con.attrib['id']))
+
+                    elif po.tag == 'inport':
+                        pname = po.attrib['name']
+                        procNode.inputPorts[pname] = Port(procNode, pname, 'in')
+                        procNode.inputPorts[pname].id = po.attrib['id']
+                        portMap[po.attrib['id']] = procNode.inputPorts[pname]
+
+
+                for pa in xmlnode.find('parameters'):
+                    procNode.createParam(pa.attrib['key'], pa.attrib['value'])
+
+
+            # connect ports
+            for con in connections:
+                ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
+
+
 
 
 ##
@@ -151,6 +192,7 @@ class ProcessingNode:
 
     def __init__(self, name, processType):
         self.name = name
+        self.procType = processType
         if processType == "":
             self.proc = Process(name)
         elif processType == "fileread":
@@ -167,6 +209,8 @@ class ProcessingNode:
             self.proc = BashProcess(name)
         elif processType == "matlab":
             self.proc = MatlabProcess(name)
+        else:
+            logger.error('Process type "%s" not supported!' % processType)
 
         # create ports
         portSpecs = self.proc.getPortSpecs()
@@ -182,6 +226,9 @@ class ProcessingNode:
     def upToDate(self):
         return all([p.upToDate() for p in self.inputPorts.values()]) \
                 and self.proc.upToDate()
+
+    def createParam(self, key, value):
+        self.proc.params[key] = value;
 
     ##
     # @brief Sets parameter <name> to value <value>
