@@ -25,7 +25,11 @@ class FlowGuiNode(GFlow.SimpleNode):
 
     def __init__(self, procNode):
         self.procNode = procNode
+        self.procNode.guiNode = self
+
+        self.portMap = {}
         self.setPorts([p for p in procNode.inputPorts.keys()], [p for p in procNode.outputPorts.keys()])
+
         self.setParams(procNode.getParams())
         self.set_name(procNode.name)
 
@@ -72,6 +76,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             sink = GFlow.SimpleSink.new("")
             sink.set_name(i)
             self.add_sink(sink)
+            self.portMap[i] = sink
 
         for o in outs:
             source = GFlow.SimpleSource.new("")
@@ -80,6 +85,8 @@ class FlowGuiNode(GFlow.SimpleNode):
             source.connect("linked", self.__sourceLinked)
             source.connect("unlinked", self.__sourceUnlinked)
             self.add_source(source)
+            self.portMap[o] = source
+
 
     def setParams(self, paramDict):
         pass
@@ -97,7 +104,6 @@ class FlowGuiNode(GFlow.SimpleNode):
             #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)
             logger.error('Incompatible type for parameter "%s" (must be %s)', key, str(type(self.procNode.getParam(key))))
 
-
     def __sourceLinked(self, sourceDock, sinkDock):
         sinkName = sinkDock.get_name()
         sinkNode = sinkDock.get_node().procNode
@@ -107,6 +113,10 @@ class FlowGuiNode(GFlow.SimpleNode):
 
         sinkPort = sinkNode.inputPorts[sinkName]
         sourcePort = sourceNode.outputPorts[sourceName]
+
+        # this will return False when the Gui ports are connected programmatically
+        # and not by hand, because a signal is emitted for a connection that already
+        # exists. this is not pretty but it does not cause problems.
         self.procNode.connectPorts(sourcePort, sinkPort)
 
     def __sourceUnlinked(self, sourceDock, sinkDock):
@@ -123,10 +133,31 @@ class FlowGui(object):
     def __init__(self, w, vbox):
         self.nv = GtkFlow.NodeView.new()
         self.nv.set_show_types(True)
+        self.nodes = []
         vbox.pack_end(self.nv, True, True, 0)
         #w.add(self.nv)
 
     def createFlowNode(self, procNode):
         n = FlowGuiNode(procNode)
+        self.nodes.append(n)
         self.nv.add_with_child(n, n.vbox)
-        #self.nv.add_node(n)
+
+    def clear(self):
+        for n in self.nodes:
+            self.nv.remove_node(n)
+        self.nodes = []
+
+
+    def createFromProcGraph(self, procGraph):
+        # create nodes
+        for pn in procGraph.nodes:
+            self.createFlowNode(pn)
+
+        # update connections
+        # TODO: this is really convoluted and requires many refs, find better way.
+        for gn in self.nodes:
+            for portname, portobj in gn.procNode.outputPorts.items():
+                print(portobj.connectedTo)
+                for procSink in portobj.connectedTo:
+                    guiSink = procSink.node.guiNode.portMap[procSink.name]
+                    gn.portMap[portname].link(guiSink)

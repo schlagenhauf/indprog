@@ -44,7 +44,7 @@ class Indprog(object):
                 return True
 
         # if no unsavedChanges or response is YES, quit
-        logger.info('Closing window');
+        logger.info('Closing window')
         Gtk.main_quit()
         return False
 
@@ -54,6 +54,14 @@ class Indprog(object):
         self.setUnsavedChanges(True)
 
     def __loadGraph(self, widget=None, data=None):
+        if self.unsavedChanges:
+            diag = Gtk.MessageDialog(self.w, 0,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, 'You have unsaved changes. Discard and continue?')
+            response = diag.run()
+            diag.destroy()
+            if response != Gtk.ResponseType.YES:
+                return
+
         dialog = Gtk.FileChooserDialog('Load Graph From File', self.w,
                 Gtk.FileChooserAction.OPEN,
                 (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -64,15 +72,11 @@ class Indprog(object):
 
         if response == Gtk.ResponseType.OK:
             logger.debug('Graph file opened: ' + filename)
-            # TODO: check if there are unsaved changes that would be overwritten
+            self.procGraph.loadFromFile(filename) # this deletes the old graph!
+            self.setUnsavedChanges(False)
 
-            if not self.unsavedChanges:
-                self.procGraph.loadFromFile(filename)
-            else:
-                # unsaved changes. ask if user wants to save first, discard or cancel
-                pass
-
-            # TODO: update gui nodes
+            self.fgui.clear()
+            self.fgui.createFromProcGraph(self.procGraph)
 
 
     def __saveGraph(self, widget=None, data=None):
@@ -89,20 +93,12 @@ class Indprog(object):
             self.setUnsavedChanges(False)
             logger.debug('Graph file saved: ' + filename)
 
-        #elif response == Gtk.ResponseType.CANCEL \
-        #    or response == Gtk.ResponseType.CLOSE \
-        #    or response == Gtk.ResponseType.DELETE_EVENT:
-        #    print("Cancel clicked")
-
-
     def setUnsavedChanges(self, uc):
         self.unsavedChanges = uc
         if self.unsavedChanges:
             self.w.set_title('*indprog')
         else:
             self.w.set_title('indprog')
-
-
 
     def __executeGraph(self, widget=None, data=None):
         self.procGraph.process()

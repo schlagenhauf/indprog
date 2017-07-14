@@ -152,7 +152,7 @@ class ProcessingNode:
         elif len(portTo.connectedTo) >= 1:
             logger.error('Cannot connect [%s:%s] to [%s:%s], sink is already connected.',
                 portFrom.node.name, portFrom.name, portTo.node.name, portTo.name)
-            return false
+            return False
 
         portFrom.connectedTo.add(portTo)
         portTo.connectedTo.add(portFrom)
@@ -216,6 +216,10 @@ class ProcessingNode:
         portSpecs = self.proc.getPortSpecs()
         self.inputPorts = {ip : Port(self, ip, 'in') for ip in portSpecs[0]}
         self.outputPorts = {op : Port(self, op, 'out') for op in portSpecs[1]}
+
+        # only used when a gui is drawing the nodes
+        self.guiNode = None
+        self.guiPos = (0,0)
 
     def getParam(self, key):
         return self.proc.params[key]
