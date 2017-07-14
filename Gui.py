@@ -38,6 +38,8 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.vbox.pack_start(label, False, False, 0)
         self.generateParamBox()
 
+        self.disableLinkingCb = False
+
     def __del__(self):
         logger.critical('DTOR not implemented!')
 
@@ -105,18 +107,17 @@ class FlowGuiNode(GFlow.SimpleNode):
             logger.error('Incompatible type for parameter "%s" (must be %s)', key, str(type(self.procNode.getParam(key))))
 
     def __sourceLinked(self, sourceDock, sinkDock):
+        if self.disableLinkingCb:
+            return
+
         sinkName = sinkDock.get_name()
         sinkNode = sinkDock.get_node().procNode
         sourceName = sourceDock.get_name()
         sourceNode = sourceDock.get_node().procNode
-        #print("%s:%s linked to %s:%s" % (sourceNode.name, sourceName, sinkNode.name, sinkName))
 
         sinkPort = sinkNode.inputPorts[sinkName]
         sourcePort = sourceNode.outputPorts[sourceName]
 
-        # this will return False when the Gui ports are connected programmatically
-        # and not by hand, because a signal is emitted for a connection that already
-        # exists. this is not pretty but it does not cause problems.
         self.procNode.connectPorts(sourcePort, sinkPort)
 
     def __sourceUnlinked(self, sourceDock, sinkDock):
@@ -135,7 +136,6 @@ class FlowGui(object):
         self.nv.set_show_types(True)
         self.nodes = []
         vbox.pack_end(self.nv, True, True, 0)
-        #w.add(self.nv)
 
     def createFlowNode(self, procNode):
         n = FlowGuiNode(procNode)
@@ -156,8 +156,11 @@ class FlowGui(object):
         # update connections
         # TODO: this is really convoluted and requires many refs, find better way.
         for gn in self.nodes:
+            gn.disableLinkingCb = True # TODO: disable handler directly?
             for portname, portobj in gn.procNode.outputPorts.items():
                 print(portobj.connectedTo)
                 for procSink in portobj.connectedTo:
                     guiSink = procSink.node.guiNode.portMap[procSink.name]
                     gn.portMap[portname].link(guiSink)
+
+            gn.disableLinkingCb = False
