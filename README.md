@@ -18,9 +18,7 @@ can be subject to major changes.**
 To run the GUI (and there is no CLI-only version right now), you need
 [libgtkflow](https://github.com/grindhold/libgtkflow). Follow the installation instructions there.
 
-**Note:** If you have trouble building libgtkflow, you might have a Gtk version < 3.20 (see [this
-issue](https://github.com/grindhold/libgtkflow/issues/60) ). If you are using Ubuntu 16.04, checking
-out commit https://github.com/grindhold/libgtkflow/commit/93f3445a53cfaa141122e14c1aa4bf107f342224 will solve this.
+**Note:** If you have trouble building libgtkflow, you might have a Gtk version < 3.20 (e.g. when you are on Ubuntu 16.04). A compatibility branch for GTK-3.18 can be [found here](https://github.com/grindhold/libgtkflow/tree/gtk-3.18-compatible).
 
 ## MatLab Bindings
 To use MatLab processing nodes, you need the [python bindings for
