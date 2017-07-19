@@ -30,7 +30,6 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.portMap = {}
         self.setPorts([p for p in procNode.inputPorts.keys()], [p for p in procNode.outputPorts.keys()])
 
-        self.setParams(procNode.getParams())
         self.set_name(procNode.name)
 
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
@@ -83,15 +82,10 @@ class FlowGuiNode(GFlow.SimpleNode):
         for o in outs:
             source = GFlow.SimpleSource.new("")
             source.set_name(o)
-            source.set_valid()
-            source.connect("linked", self.__sourceLinked)
-            source.connect("unlinked", self.__sourceUnlinked)
+            source.connect("linked", self.__onSourceLink)
+            source.connect("unlinked", self.__onSourceUnlink)
             self.add_source(source)
             self.portMap[o] = source
-
-
-    def setParams(self, paramDict):
-        pass
 
     def __paramChanged(self, gtkEntry, key):
         valStr = gtkEntry.get_text()
@@ -106,7 +100,7 @@ class FlowGuiNode(GFlow.SimpleNode):
             #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)
             logger.error('Incompatible type for parameter "%s" (must be %s)', key, str(type(self.procNode.getParam(key))))
 
-    def __sourceLinked(self, sourceDock, sinkDock):
+    def __onSourceLink(self, sourceDock, sinkDock):
         if self.disableLinkingCb:
             return
 
@@ -120,7 +114,7 @@ class FlowGuiNode(GFlow.SimpleNode):
 
         self.procNode.connectPorts(sourcePort, sinkPort)
 
-    def __sourceUnlinked(self, sourceDock, sinkDock):
+    def __onSourceUnlink(self, sourceDock, sinkDock):
         sinkName = sinkDock.get_name()
         sinkNode = sinkDock.get_node().procNode
         sinkPort = sinkNode.inputPorts[sinkName]
@@ -128,7 +122,6 @@ class FlowGuiNode(GFlow.SimpleNode):
         sourceNode = sourceDock.get_node().procNode
         sourcePort = sourceNode.outputPorts[sourceName]
         self.procNode.disconnectPorts(sourcePort, sinkPort)
-
 
 class FlowGui(object):
     def __init__(self, w, vbox):
@@ -141,6 +134,7 @@ class FlowGui(object):
         n = FlowGuiNode(procNode)
         self.nodes.append(n)
         self.nv.add_with_child(n, n.vbox)
+        self.nv.set_node_position(n, procNode.guiPos[0], procNode.guiPos[1])
 
     def clear(self):
         for n in self.nodes:
