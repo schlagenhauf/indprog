@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+import os
+
+os.environ['LD_LIBRARY_PATH'] = '/usr/local/lib/x86_64-linux-gnu'
+os.environ['GI_TYPELIB_PATH'] = '/usr/local/lib/x86_64-linux-gnu/girepository-1.0/'
+
+
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('GFlow', '0.2')
