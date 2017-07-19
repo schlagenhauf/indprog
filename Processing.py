@@ -74,6 +74,9 @@ class ProcessingGraph:
         for n in self.nodes:
             xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.procType)
 
+            if n.guiNode:
+                ET.SubElement(xmlnode, 'gui', pos_x=str(n.guiPos[0]), pos_y=str(n.guiPos[1]))
+
             xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
                 ET.SubElement(xmlparams, 'parameter', key=pk, value=pv)
@@ -136,8 +139,6 @@ class ProcessingGraph:
             # connect ports
             for con in connections:
                 ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
-
-
 
 
 ##
