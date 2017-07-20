@@ -23,9 +23,11 @@ class FlowGuiNode(GFlow.SimpleNode):
         x.__class__ = cls
         return x
 
-    def __init__(self, procNode):
+    def __init__(self, procNode, nv):
         self.procNode = procNode
         self.procNode.guiNode = self
+
+        self.nv = nv
 
         self.portMap = {}
         self.setPorts([p for p in procNode.inputPorts.keys()], [p for p in procNode.outputPorts.keys()])
@@ -71,7 +73,6 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.expander.add(self.paramBox)
         self.vbox.pack_end(self.expander, True, True, 0)
 
-
     def setPorts(self, ins, outs):
         for i in ins:
             sink = GFlow.SimpleSink.new("")
@@ -86,6 +87,9 @@ class FlowGuiNode(GFlow.SimpleNode):
             source.connect("unlinked", self.__onSourceUnlink)
             self.add_source(source)
             self.portMap[o] = source
+
+    def getPosition(self):
+        return self.nv.get_node_position(self)
 
     def __paramChanged(self, gtkEntry, key):
         valStr = gtkEntry.get_text()
@@ -131,10 +135,11 @@ class FlowGui(object):
         vbox.pack_end(self.nv, True, True, 0)
 
     def createFlowNode(self, procNode):
-        n = FlowGuiNode(procNode)
+        n = FlowGuiNode(procNode, self.nv) # TODO: remove dependency to nodeview
         self.nodes.append(n)
         self.nv.add_with_child(n, n.vbox)
         self.nv.set_node_position(n, procNode.guiPos[0], procNode.guiPos[1])
+
 
     def clear(self):
         for n in self.nodes:
@@ -152,7 +157,6 @@ class FlowGui(object):
         for gn in self.nodes:
             gn.disableLinkingCb = True # TODO: disable handler directly?
             for portname, portobj in gn.procNode.outputPorts.items():
-                print(portobj.connectedTo)
                 for procSink in portobj.connectedTo:
                     guiSink = procSink.node.guiNode.portMap[procSink.name]
                     gn.portMap[portname].link(guiSink)

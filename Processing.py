@@ -75,7 +75,8 @@ class ProcessingGraph:
             xmlnode = ET.SubElement(root, 'node', name=n.name, type=n.procType)
 
             if n.guiNode:
-                ET.SubElement(xmlnode, 'gui', pos_x=str(n.guiPos[0]), pos_y=str(n.guiPos[1]))
+                pos = n.guiNode.getPosition()
+                ET.SubElement(xmlnode, 'gui', pos_x=str(pos[0]), pos_y=str(pos[1]))
 
             xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
@@ -116,6 +117,11 @@ class ProcessingGraph:
                 procNode.outputPorts = {}
                 procNode.inputPorts = {}
 
+                # get gui node position
+                xmlgui = xmlnode.find('gui')
+                procNode.guiPos = (int(xmlgui.attrib['pos_x']), int(xmlgui.attrib['pos_y']))
+
+                # get ports
                 for po in xmlnode.find('ports'):
                     if po.tag == 'outport':
                         pname = po.attrib['name']
