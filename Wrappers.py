@@ -172,17 +172,17 @@ class AdditionProcess(Process):
 
     def run(self, inFds, outFds):
         valSum = 0
-        print('Adding: ')
+        logger.debug('Adding: ')
         for i in inFds:
             iop = open(i, 'rb')
             if iop:
                 data = iop.read()
                 val = struct.unpack('f', data)[0]
-                print(' + ' + str(val))
+                logger.debug(' + ' + str(val))
                 valSum += val
                 iop.close()
 
-        print(' = ' + str(valSum))
+        logger.debug(' = ' + str(valSum))
 
         oop = open(outFds[0], 'wb')
         if oop:
