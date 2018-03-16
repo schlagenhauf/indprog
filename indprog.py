@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+import os
+
+os.environ['LD_LIBRARY_PATH'] = '/usr/local/lib/x86_64-linux-gnu'
+os.environ['GI_TYPELIB_PATH'] = '/usr/local/lib/x86_64-linux-gnu/girepository-1.0/'
+
+
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('GFlow', '0.2')
@@ -22,7 +28,8 @@ from Gui import FlowGui
 class Indprog(object):
     def __init__(self):
         self.w = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
-        self.w.connect("destroy", self.__quit)
+        self.w.set_title('indprog');
+        self.w.connect('delete-event', self.__quit)
         self.vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
         self.w.add(self.vbox)
 
@@ -31,32 +38,73 @@ class Indprog(object):
         self.fgui = FlowGui(self.w, self.vbox)
         self.procGraph = ProcessingGraph()
 
+        self.setUnsavedChanges(False)
+
     def __quit(self, widget=None, data=None):
+        if self.unsavedChanges:
+            diag = Gtk.MessageDialog(self.w, 0,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, 'You have unsaved changes. Really quit?')
+            response = diag.run()
+            diag.destroy()
+            if response != Gtk.ResponseType.YES:
+                return True
+
+        # if no unsavedChanges or response is YES, quit
+        logger.info('Closing window')
         Gtk.main_quit()
-        sys.exit(0)
+        return False
 
     def __createNode(self, nodeType, widget=None, data=None):
         node = self.procGraph.createNode('node_' + nodeType, nodeType)
         self.fgui.createFlowNode(node)
+        self.setUnsavedChanges(True)
 
     def __loadGraph(self, widget=None, data=None):
+        if self.unsavedChanges:
+            diag = Gtk.MessageDialog(self.w, 0,
+                    Gtk.MessageType.QUESTION, Gtk.ButtonsType.YES_NO, 'You have unsaved changes. Discard and continue?')
+            response = diag.run()
+            diag.destroy()
+            if response != Gtk.ResponseType.YES:
+                return
+
         dialog = Gtk.FileChooserDialog('Load Graph From File', self.w,
                 Gtk.FileChooserAction.OPEN,
                 (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                  Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
         response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            print("Open clicked")
-            print("File selected: " + dialog.get_filename())
-        elif response == Gtk.ResponseType.CANCEL \
-            or response == Gtk.ResponseType.CLOSE \
-            or response == Gtk.ResponseType.DELETE_EVENT:
-            print("Cancel clicked")
-
+        filename = dialog.get_filename()
         dialog.destroy()
 
+        if response == Gtk.ResponseType.OK:
+            logger.debug('Graph file opened: ' + filename)
+            self.procGraph.loadFromFile(filename) # this deletes the old graph!
+            self.setUnsavedChanges(False)
+
+            self.fgui.clear()
+            self.fgui.createFromProcGraph(self.procGraph)
+
+
     def __saveGraph(self, widget=None, data=None):
-        print('blasave')
+        dialog = Gtk.FileChooserDialog('Save Graph To File', self.w,
+                Gtk.FileChooserAction.SAVE,
+                (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                 Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
+        response = dialog.run()
+        filename = dialog.get_filename()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            self.procGraph.saveToFile(filename)
+            self.setUnsavedChanges(False)
+            logger.debug('Graph file saved: ' + filename)
+
+    def setUnsavedChanges(self, uc):
+        self.unsavedChanges = uc
+        if self.unsavedChanges:
+            self.w.set_title('*indprog')
+        else:
+            self.w.set_title('indprog')
 
     def __executeGraph(self, widget=None, data=None):
         self.procGraph.process()

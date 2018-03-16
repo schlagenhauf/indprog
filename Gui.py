@@ -23,16 +23,23 @@ class FlowGuiNode(GFlow.SimpleNode):
         x.__class__ = cls
         return x
 
-    def __init__(self, procNode):
+    def __init__(self, procNode, nv):
         self.procNode = procNode
+        self.procNode.guiNode = self
+
+        self.nv = nv
+
+        self.portMap = {}
         self.setPorts([p for p in procNode.inputPorts.keys()], [p for p in procNode.outputPorts.keys()])
-        self.setParams(procNode.getParams())
+
         self.set_name(procNode.name)
 
         self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         label = Gtk.Label.new(procNode.name)
         self.vbox.pack_start(label, False, False, 0)
         self.generateParamBox()
+
+        self.disableLinkingCb = False
 
     def __del__(self):
         logger.critical('DTOR not implemented!')
@@ -66,23 +73,23 @@ class FlowGuiNode(GFlow.SimpleNode):
         self.expander.add(self.paramBox)
         self.vbox.pack_end(self.expander, True, True, 0)
 
-
     def setPorts(self, ins, outs):
         for i in ins:
             sink = GFlow.SimpleSink.new("")
             sink.set_name(i)
             self.add_sink(sink)
+            self.portMap[i] = sink
 
         for o in outs:
             source = GFlow.SimpleSource.new("")
             source.set_name(o)
-            source.set_valid()
-            source.connect("linked", self.__sourceLinked)
-            source.connect("unlinked", self.__sourceUnlinked)
+            source.connect("linked", self.__onSourceLink)
+            source.connect("unlinked", self.__onSourceUnlink)
             self.add_source(source)
+            self.portMap[o] = source
 
-    def setParams(self, paramDict):
-        pass
+    def getPosition(self):
+        return self.nv.get_node_position(self)
 
     def __paramChanged(self, gtkEntry, key):
         valStr = gtkEntry.get_text()
@@ -97,19 +104,21 @@ class FlowGuiNode(GFlow.SimpleNode):
             #gtkEntry.modify_base(Gtk.StateType.GTK_STATE_NORMAL, FlowGuiNode.COLOR_INVALID)
             logger.error('Incompatible type for parameter "%s" (must be %s)', key, str(type(self.procNode.getParam(key))))
 
+    def __onSourceLink(self, sourceDock, sinkDock):
+        if self.disableLinkingCb:
+            return
 
-    def __sourceLinked(self, sourceDock, sinkDock):
         sinkName = sinkDock.get_name()
         sinkNode = sinkDock.get_node().procNode
         sourceName = sourceDock.get_name()
         sourceNode = sourceDock.get_node().procNode
-        #print("%s:%s linked to %s:%s" % (sourceNode.name, sourceName, sinkNode.name, sinkName))
 
         sinkPort = sinkNode.inputPorts[sinkName]
         sourcePort = sourceNode.outputPorts[sourceName]
+
         self.procNode.connectPorts(sourcePort, sinkPort)
 
-    def __sourceUnlinked(self, sourceDock, sinkDock):
+    def __onSourceUnlink(self, sourceDock, sinkDock):
         sinkName = sinkDock.get_name()
         sinkNode = sinkDock.get_node().procNode
         sinkPort = sinkNode.inputPorts[sinkName]
@@ -118,15 +127,38 @@ class FlowGuiNode(GFlow.SimpleNode):
         sourcePort = sourceNode.outputPorts[sourceName]
         self.procNode.disconnectPorts(sourcePort, sinkPort)
 
-
 class FlowGui(object):
     def __init__(self, w, vbox):
         self.nv = GtkFlow.NodeView.new()
         self.nv.set_show_types(True)
+        self.nodes = []
         vbox.pack_end(self.nv, True, True, 0)
-        #w.add(self.nv)
 
     def createFlowNode(self, procNode):
-        n = FlowGuiNode(procNode)
+        n = FlowGuiNode(procNode, self.nv) # TODO: remove dependency to nodeview
+        self.nodes.append(n)
         self.nv.add_with_child(n, n.vbox)
-        #self.nv.add_node(n)
+        self.nv.set_node_position(n, procNode.guiPos[0], procNode.guiPos[1])
+
+
+    def clear(self):
+        for n in self.nodes:
+            self.nv.remove_node(n)
+        self.nodes = []
+
+
+    def createFromProcGraph(self, procGraph):
+        # create nodes
+        for pn in procGraph.nodes:
+            self.createFlowNode(pn)
+
+        # update connections
+        # TODO: this is really convoluted and requires many refs, find better way.
+        for gn in self.nodes:
+            gn.disableLinkingCb = True # TODO: disable handler directly?
+            for portname, portobj in gn.procNode.outputPorts.items():
+                for procSink in portobj.connectedTo:
+                    guiSink = procSink.node.guiNode.portMap[procSink.name]
+                    gn.portMap[portname].link(guiSink)
+
+            gn.disableLinkingCb = False
