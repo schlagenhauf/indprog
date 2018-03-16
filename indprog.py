@@ -179,6 +179,7 @@ if __name__ == '__main__':
             help="Set the logging level")
     parser.add_argument("-f", "--file", dest="filename", help="Path to graph file")
     parser.add_argument("-i", "--interactive", action="store_true", help="Open application with GUI")
+    parser.add_argument("-x", "--execute", action="store_true", help="Execute processing")
     args = parser.parse_args()
 
     # set log level and format
@@ -201,4 +202,10 @@ if __name__ == '__main__':
         mp.run()
         logger.info('Quitting')
     else:
-        pass
+        pg = ProcessingGraph()
+        if (args.filename):
+            pg.loadFromFile(args.filename)
+
+        if (args.execute):
+            pg.process()
+        print(pg)
