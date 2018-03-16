@@ -1,6 +1,7 @@
 
 #import matlab.engine
 
+import os.path
 import subprocess
 import struct
 import codecs
@@ -18,6 +19,10 @@ class Process(ABC):
         self.name = name
         self.params = {}
         self.portSpecs = [[],[]]
+
+
+    def init(self):
+        pass
 
     ##
     # @brief Returns the port specifications of this process so that the containing node
@@ -217,17 +222,36 @@ class BashProcess(Process):
     def __init__(self, name):
         super(BashProcess, self).__init__(name)
         self.params['filename'] = './bashTemplate.bash'
+
+    def init(self):
+        if not os.path.isfile(self.params['filename']):
+            logger.error('Could not find file "%s"' % self.params['filename'])
+            return
+
         try:
-            bashProc = subprocess.Popen(self.params['filename'], shell=True, stdout=subprocess.PIPE)
-            portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
+            bashProc = subprocess.Popen('bash ' + self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            # print stderr lines if there are any
+            for errLine in bashProc.stderr:
+                logger.error(errLine)
+
+            portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(';')
             self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
-        except:
+        except IOError: # TODO: REPLACE WITH PROPER EXCEPTION TYPE!
             logger.error('Failed to get port specs from bash script. Make sure that your script echoes \
-                    a list of ports in the form in1,...,inN out1,...,outM when executed without arguments')
+                    a list of ports in the form in1,...,inN;out1,...,outM when executed without arguments')
             self.portSpecs = [[],[]]
 
 
     def run(self, inFds, outFds):
-        cmd = self.params['filename'] + ' ' + ','.join(inFds) + ' ' + ','.join(outFds)
-        bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        print(bashProc.stdout.read())
+        cmd = 'bash ' + self.params['filename'] + ' ' + ','.join(inFds) + ';' + ','.join(outFds)
+        logger.debug("Bash Cmd: %s" % cmd)
+        bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # print stderr lines if there are any
+        for errLine in bashProc.stderr:
+            logger.error(errLine)
+
+        for outLine in bashProc.stdout:
+            pass
+            #logger.debug(outLine)

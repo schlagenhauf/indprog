@@ -156,6 +156,8 @@ class ProcessingGraph:
                             for pa in paramList:
                                 procNode.createParam(pa.attrib['key'], pa.attrib['value'])
 
+                        procNode.initProcess()
+
 
                     # connect ports
                     for con in connections:
@@ -253,6 +255,9 @@ class ProcessingNode:
         # only used when a gui is drawing the nodes
         self.guiNode = None
         self.guiPos = (0,0)
+
+    def initProcess(self):
+        self.proc.init()
 
     def getParam(self, key):
         return self.proc.params[key]
