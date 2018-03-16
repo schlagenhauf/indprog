@@ -11,6 +11,7 @@ from Wrappers import *
 
 logger = logging.getLogger(__name__)
 
+
 class ProcessingGraph:
     def __init__(self):
         self.nodes = []

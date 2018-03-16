@@ -19,8 +19,8 @@ import sys
 import argparse
 
 import logging
-
 logger = logging.getLogger(__name__)
+
 
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         logger.info('Startin interactive mode')
         mp = Indprog()
         mp.run()
-        logger.info('Quitting')
+        logger.info('Exiting')
     else:
         pg = ProcessingGraph()
         if (args.filename):
@@ -208,4 +208,5 @@ if __name__ == '__main__':
 
         if (args.execute):
             pg.process()
-        print(pg)
+
+        logger.info('Exiting')

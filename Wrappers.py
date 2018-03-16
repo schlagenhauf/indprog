@@ -6,9 +6,10 @@ import struct
 import codecs
 from abc import ABC, abstractmethod
 import logging
-logger = logging.getLogger(__name__)
 
 from SecureFileOps import *
+
+logger = logging.getLogger(__name__)
 
 ##
 # @brief Wrapper for the process that a node represents. Can wrap a variety of actions.
@@ -117,7 +118,7 @@ class PrinterProcess(Process):
     def run(self, inFds, outFds):
         for  i in inFds:
             with open(i, 'rb') as oip:
-                logger.info('PRINTER: Read from input file:')
+                logger.info('Printer: Read from input file:')
                 while True:
                     line = oip.read()
                     if not line:
@@ -131,7 +132,7 @@ class PrinterProcess(Process):
                         logger.error('Encoding %s not available, falling back to %s' % (self.params['encoding'], enc))
 
                     string = line.decode(enc)
-                    logger.info('PRINTER: \t%s (%s)', string, line)
+                    logger.info('Printer: \t%s (%s)', string, line)
 
 
 class ConstantProcess(Process):
@@ -174,19 +175,22 @@ class AdditionProcess(Process):
         valSum = 0
         logger.debug('Adding: ')
         for i in inFds:
-            iop = open(i, 'rb')
-            if iop:
+            with open(i, 'rb') as iop:
                 data = iop.read()
-                val = struct.unpack('f', data)[0]
-                logger.debug(' + ' + str(val))
-                valSum += val
-                iop.close()
+                try:
+                    #val = struct.unpack('f', data)[0]
+                    val = float(data)
+                    logger.debug(' + ' + str(val))
+                    valSum += val
+                except struct.error as se:
+                    logger.error('Failed to unpack data: %s' % str(se))
 
         logger.debug(' = ' + str(valSum))
 
         oop = open(outFds[0], 'wb')
         if oop:
-            data = struct.pack('f',valSum)
+            data = bytearray(str(valSum), 'ascii')
+            #data = struct.pack('f',valSum)
             oop.write(data)
             oop.flush()
             oop.close()
