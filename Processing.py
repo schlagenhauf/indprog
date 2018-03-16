@@ -20,8 +20,10 @@ class ProcessingGraph:
         self.nodes.append(node)
         return node
 
+
     def getSinks(self):
         return [n for n in self.nodes if not n.outputPorts or not any([op.connectedTo for op in n.outputPorts.values()])]
+
 
     def process(self, startNodes=None):
         if not startNodes:
@@ -32,6 +34,7 @@ class ProcessingGraph:
         for n in reversed(sequence):
             n.process()
         logger.info('Finished processing')
+
 
     def topologicalSort(self, startNodesRef):
         startNodes = list(startNodesRef)
@@ -102,49 +105,59 @@ class ProcessingGraph:
         self.nodes = [] # TODO: check if circular refs slow down deletion
 
         with open(path, 'r') as f:
-            xmlstr = f.read()
-            root = ET.fromstring(xmlstr)
+            try:
+                xmlstr = f.read()
+                root = ET.fromstring(xmlstr)
 
-            # map from ID to port object
-            portMap = {}
-            connections = [];
+                # map from ID to port object
+                portMap = {}
+                connections = [];
 
-            # set up nodes
-            for xmlnode in root:
-                procNode = self.createNode(xmlnode.attrib['name'], xmlnode.attrib['type'])
+                # set up nodes
+                for xmlnode in root:
+                    procNode = self.createNode(xmlnode.attrib['name'], xmlnode.attrib['type'])
 
-                # delete ports created by process TODO: don't delete, try to match
-                procNode.outputPorts = {}
-                procNode.inputPorts = {}
+                    # delete ports created by process TODO: don't delete, try to match
+                    procNode.outputPorts = {}
+                    procNode.inputPorts = {}
 
-                # get gui node position
-                xmlgui = xmlnode.find('gui')
-                procNode.guiPos = (int(xmlgui.attrib['pos_x']), int(xmlgui.attrib['pos_y']))
+                    # get gui node position
+                    xmlgui = xmlnode.find('gui')
+                    procNode.guiPos = (int(xmlgui.attrib['pos_x']), int(xmlgui.attrib['pos_y']))
 
-                # get ports
-                for po in xmlnode.find('ports'):
-                    if po.tag == 'outport':
-                        pname = po.attrib['name']
-                        procNode.outputPorts[pname] = Port(procNode, pname, 'out')
-                        procNode.outputPorts[pname].id = po.attrib['id']
-                        portMap[po.attrib['id']] = procNode.outputPorts[pname]
-                        for con in po:
-                            connections.append((po.attrib['id'], con.attrib['id']))
+                    # get ports
+                    for po in xmlnode.find('ports'):
+                        if po.tag == 'outport':
+                            pname = po.attrib['name']
+                            procNode.outputPorts[pname] = Port(procNode, pname, 'out')
+                            procNode.outputPorts[pname].id = po.attrib['id']
+                            portMap[po.attrib['id']] = procNode.outputPorts[pname]
+                            for con in po:
+                                connections.append((po.attrib['id'], con.attrib['id']))
 
-                    elif po.tag == 'inport':
-                        pname = po.attrib['name']
-                        procNode.inputPorts[pname] = Port(procNode, pname, 'in')
-                        procNode.inputPorts[pname].id = po.attrib['id']
-                        portMap[po.attrib['id']] = procNode.inputPorts[pname]
-
-
-                for pa in xmlnode.find('parameters'):
-                    procNode.createParam(pa.attrib['key'], pa.attrib['value'])
+                        elif po.tag == 'inport':
+                            pname = po.attrib['name']
+                            procNode.inputPorts[pname] = Port(procNode, pname, 'in')
+                            procNode.inputPorts[pname].id = po.attrib['id']
+                            portMap[po.attrib['id']] = procNode.inputPorts[pname]
 
 
-            # connect ports
-            for con in connections:
-                ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
+                    paramList = xmlnode.find('parameters')
+                    if paramList:
+                        for pa in paramList:
+                            procNode.createParam(pa.attrib['key'], pa.attrib['value'])
+
+
+                # connect ports
+                for con in connections:
+                    ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
+            except ET.ParseError as pe:
+                logger.error('An error occured while loading the XML file: %s' % str(pe))
+                self.nodes = []
+
+
+    def __str__(self):
+        return "Number of nodes: %d" % len(self.nodes)
 
 
 ##
@@ -202,6 +215,8 @@ class ProcessingNode:
         self.procType = processType
         if processType == "":
             self.proc = Process(name)
+        elif processType == "dummy":
+            self.proc = DummyProcess(name)
         elif processType == "fileread":
             self.proc = FileReadProcess(name)
         elif processType == "filewrite":

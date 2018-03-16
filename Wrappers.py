@@ -41,6 +41,14 @@ class Process(ABC):
     def run(self, inFds, outFds):
         pass
 
+class DummyProcess(Process):
+    def __init__(self, name):
+        super(DummyProcess, self).__init__(name)
+        self.portSpecs = [['in'],['out']]
+
+    def run(self, inFds, outFds):
+        logger.debug('Executing dummy process')
+
 
 class FileReadProcess(Process):
     def __init__(self, name):
