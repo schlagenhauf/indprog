@@ -34,7 +34,7 @@ class Process(ABC):
     def getParams(self):
         return self.params
 
-    def upToDate(self):
+    def isUpToDate(self):
         return False
 
     @abstractmethod

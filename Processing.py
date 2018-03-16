@@ -31,9 +31,16 @@ class ProcessingGraph:
         sequence = self.topologicalSort(startNodes)
 
         logger.info('Start processing (%d / %d node(s), %d sink(s))', len(sequence), len(self.nodes), len(startNodes))
+        wentWell = True
         for n in reversed(sequence):
-            n.process()
-        logger.info('Finished processing')
+            if not n.process():
+                wentWell = False
+                break
+
+        if wentWell:
+            logger.info('Finished processing')
+        else:
+            logger.critical('Processing failed. Aborting.')
 
 
     def topologicalSort(self, startNodesRef):
@@ -45,7 +52,7 @@ class ProcessingGraph:
         sequence = []
         while startNodes:
             n = startNodes.pop()
-            if not n.upToDate():
+            if not n.isUpToDate():
                 sequence.append(n)
             for pn in pureGraph[n][0]:
                 pureGraph[pn][1].remove(n)
@@ -252,9 +259,12 @@ class ProcessingNode:
     def getParams(self):
         return self.proc.getParams()
 
-    def upToDate(self):
-        return all([p.upToDate() for p in self.inputPorts.values()]) \
-                and self.proc.upToDate()
+    def isUpToDate(self):
+        return all([p.isUpToDate() for p in self.inputPorts.values()]) \
+                and self.proc.isUpToDate()
+
+    def isReady(self):
+        pass
 
     def createParam(self, key, value):
         self.proc.params[key] = value;
@@ -279,9 +289,20 @@ class ProcessingNode:
         outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
         if all(inFiles) and all(outFiles):
             logger.debug('Executing process "%s"', self.name)
-            self.proc.run(inFiles, outFiles)
+            try:
+                self.proc.run(inFiles, outFiles)
+                return True
+            except Exception as e:
+                logger.error('Error while executing process %s: %s' % (self.name, str(e)))
+                return False
         else:
-            logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
+            notConnectedPorts = [inPort.name for inPort in self.inputPorts.values() if not inPort.fileObj]\
+                + [outPort.fileObj for outPort in self.outputPorts.values() if not outPort.fileObj]
+
+            logger.error('The following ports of node "%s" are not connected: ' % self.name)
+            for nc in notConnectedPorts:
+                logger.error('\tPort "%s"' % nc)
+            return False
 
     def __str__(self):
         return 'Processing Node "%s", %d input ports, %d output ports' % (self.name, len(self.inputPorts), len(self.outputPorts))
@@ -307,7 +328,7 @@ class Port:
         #if self.fileObj:
         #    os.unlink(self.fileObj)
 
-    def upToDate(self):
+    def isUpToDate(self):
         return False
 
     def __str__(self):
