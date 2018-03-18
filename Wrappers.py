@@ -229,7 +229,7 @@ class BashProcess(Process):
             return
 
         try:
-            bashProc = subprocess.Popen('bash ' + self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            bashProc = subprocess.Popen('bash "%s"' % self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             # print stderr lines if there are any
             for errLine in bashProc.stderr:
@@ -237,14 +237,14 @@ class BashProcess(Process):
 
             portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(';')
             self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
-        except IOError: # TODO: REPLACE WITH PROPER EXCEPTION TYPE!
+        except IndexError: # TODO: REPLACE WITH PROPER EXCEPTION TYPE!
             logger.error('Failed to get port specs from bash script. Make sure that your script echoes \
                     a list of ports in the form in1,...,inN;out1,...,outM when executed without arguments')
             self.portSpecs = [[],[]]
 
 
     def run(self, inFds, outFds):
-        cmd = 'bash ' + self.params['filename'] + ' ' + ','.join(inFds) + ';' + ','.join(outFds)
+        cmd = 'bash "%s %s;%s"' % (self.params['filename'], ','.join(inFds), ','.join(outFds))
         logger.debug("Bash Cmd: %s" % cmd)
         bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
