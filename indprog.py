@@ -175,11 +175,11 @@ class Indprog(object):
 if __name__ == '__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument("action", nargs='?', default='gui', choices=['gui', 'execute', 'check'],\
+            help="What action to perform (default: %(default)s).")
     parser.add_argument("-l", "--log", dest="logLevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], \
             help="Set the logging level")
     parser.add_argument("-f", "--file", dest="filename", help="Path to graph file")
-    parser.add_argument("-i", "--interactive", action="store_true", help="Open application with GUI")
-    parser.add_argument("-x", "--execute", action="store_true", help="Execute processing")
     args = parser.parse_args()
 
     # set log level and format
@@ -193,20 +193,24 @@ if __name__ == '__main__':
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt="%H:%M:%S", stream=sys.stdout)
 
+
     # if gui, let gui handle the graph, otherwise execute the action specified in the command line
-    if (args.interactive):
+    if args.action == 'gui':
         # g = Gui(args)
         # g.run()
         logger.info('Startin interactive mode')
         mp = Indprog()
         mp.run()
         logger.info('Exiting')
-    else:
+    elif args.action == 'execute':
         pg = ProcessingGraph()
         if (args.filename):
             pg.loadFromFile(args.filename)
-
-        if (args.execute):
             pg.process()
+        else:
+            logger.critical('"Execute" action needs a file argument')
 
-        logger.info('Exiting')
+    else:
+        logger.critical('Action %s not implemented.' % args.action)
+
+    logger.info('Exiting')
