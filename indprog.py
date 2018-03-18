@@ -19,8 +19,8 @@ import sys
 import argparse
 
 import logging
-
 logger = logging.getLogger(__name__)
+
 
 from Processing import ProcessingGraph, ProcessingNode
 from Gui import FlowGui
@@ -173,11 +173,16 @@ class Indprog(object):
         Gtk.main()
 
 if __name__ == '__main__':
+    # parse command line arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument("action", nargs='?', default='gui', choices=['gui', 'execute', 'check'],\
+            help="What action to perform (default: %(default)s).")
     parser.add_argument("-l", "--log", dest="logLevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], \
             help="Set the logging level")
-
+    parser.add_argument("-f", "--file", dest="filename", help="Path to graph file")
     args = parser.parse_args()
+
+    # set log level and format
     if args.logLevel:
         lvl = logging.getLevelName(args.logLevel)
     else:
@@ -188,7 +193,24 @@ if __name__ == '__main__':
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt="%H:%M:%S", stream=sys.stdout)
 
-    logger.info('Starting...')
-    mp = Indprog()
-    mp.run()
-    logger.info('Quitting')
+
+    # if gui, let gui handle the graph, otherwise execute the action specified in the command line
+    if args.action == 'gui':
+        # g = Gui(args)
+        # g.run()
+        logger.info('Startin interactive mode')
+        mp = Indprog()
+        mp.run()
+        logger.info('Exiting')
+    elif args.action == 'execute':
+        pg = ProcessingGraph()
+        if (args.filename):
+            pg.loadFromFile(args.filename)
+            pg.process()
+        else:
+            logger.critical('"Execute" action needs a file argument')
+
+    else:
+        logger.critical('Action %s not implemented.' % args.action)
+
+    logger.info('Exiting')

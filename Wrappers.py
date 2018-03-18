@@ -1,14 +1,16 @@
 
 #import matlab.engine
 
+import os.path
 import subprocess
 import struct
 import codecs
 from abc import ABC, abstractmethod
 import logging
-logger = logging.getLogger(__name__)
 
 from SecureFileOps import *
+
+logger = logging.getLogger(__name__)
 
 ##
 # @brief Wrapper for the process that a node represents. Can wrap a variety of actions.
@@ -17,6 +19,10 @@ class Process(ABC):
         self.name = name
         self.params = {}
         self.portSpecs = [[],[]]
+
+
+    def init(self):
+        pass
 
     ##
     # @brief Returns the port specifications of this process so that the containing node
@@ -34,12 +40,20 @@ class Process(ABC):
     def getParams(self):
         return self.params
 
-    def upToDate(self):
+    def isUpToDate(self):
         return False
 
     @abstractmethod
     def run(self, inFds, outFds):
         pass
+
+class DummyProcess(Process):
+    def __init__(self, name):
+        super(DummyProcess, self).__init__(name)
+        self.portSpecs = [['in'],['out']]
+
+    def run(self, inFds, outFds):
+        logger.debug('Executing dummy process')
 
 
 class FileReadProcess(Process):
@@ -109,7 +123,7 @@ class PrinterProcess(Process):
     def run(self, inFds, outFds):
         for  i in inFds:
             with open(i, 'rb') as oip:
-                logger.info('PRINTER: Read from input file:')
+                logger.info('Printer: Read from input file:')
                 while True:
                     line = oip.read()
                     if not line:
@@ -123,7 +137,7 @@ class PrinterProcess(Process):
                         logger.error('Encoding %s not available, falling back to %s' % (self.params['encoding'], enc))
 
                     string = line.decode(enc)
-                    logger.info('PRINTER: \t%s (%s)', string, line)
+                    logger.info('Printer: \t%s (%s)', string, line)
 
 
 class ConstantProcess(Process):
@@ -164,21 +178,24 @@ class AdditionProcess(Process):
 
     def run(self, inFds, outFds):
         valSum = 0
-        print('Adding: ')
+        logger.debug('Adding: ')
         for i in inFds:
-            iop = open(i, 'rb')
-            if iop:
+            with open(i, 'rb') as iop:
                 data = iop.read()
-                val = struct.unpack('f', data)[0]
-                print(' + ' + str(val))
-                valSum += val
-                iop.close()
+                try:
+                    #val = struct.unpack('f', data)[0]
+                    val = float(data)
+                    logger.debug(' + ' + str(val))
+                    valSum += val
+                except struct.error as se:
+                    logger.error('Failed to unpack data: %s' % str(se))
 
-        print(' = ' + str(valSum))
+        logger.debug(' = ' + str(valSum))
 
         oop = open(outFds[0], 'wb')
         if oop:
-            data = struct.pack('f',valSum)
+            data = bytearray(str(valSum), 'ascii')
+            #data = struct.pack('f',valSum)
             oop.write(data)
             oop.flush()
             oop.close()
@@ -205,17 +222,36 @@ class BashProcess(Process):
     def __init__(self, name):
         super(BashProcess, self).__init__(name)
         self.params['filename'] = './bashTemplate.bash'
+
+    def init(self):
+        if not os.path.isfile(self.params['filename']):
+            logger.error('Could not find file "%s"' % self.params['filename'])
+            return
+
         try:
-            bashProc = subprocess.Popen(self.params['filename'], shell=True, stdout=subprocess.PIPE)
-            portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(' ')
+            bashProc = subprocess.Popen('bash ' + self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            # print stderr lines if there are any
+            for errLine in bashProc.stderr:
+                logger.error(errLine)
+
+            portSpecStr = bashProc.stdout.readline().decode('ascii').rstrip('\n').split(';')
             self.portSpecs = [portSpecStr[0].split(','),portSpecStr[1].split(',')]
-        except:
+        except IOError: # TODO: REPLACE WITH PROPER EXCEPTION TYPE!
             logger.error('Failed to get port specs from bash script. Make sure that your script echoes \
-                    a list of ports in the form in1,...,inN out1,...,outM when executed without arguments')
+                    a list of ports in the form in1,...,inN;out1,...,outM when executed without arguments')
             self.portSpecs = [[],[]]
 
 
     def run(self, inFds, outFds):
-        cmd = self.params['filename'] + ' ' + ','.join(inFds) + ' ' + ','.join(outFds)
-        bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        print(bashProc.stdout.read())
+        cmd = 'bash ' + self.params['filename'] + ' ' + ','.join(inFds) + ';' + ','.join(outFds)
+        logger.debug("Bash Cmd: %s" % cmd)
+        bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # print stderr lines if there are any
+        for errLine in bashProc.stderr:
+            logger.error(errLine)
+
+        for outLine in bashProc.stdout:
+            pass
+            #logger.debug(outLine)

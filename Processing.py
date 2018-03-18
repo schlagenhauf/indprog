@@ -11,6 +11,7 @@ from Wrappers import *
 
 logger = logging.getLogger(__name__)
 
+
 class ProcessingGraph:
     def __init__(self):
         self.nodes = []
@@ -20,8 +21,10 @@ class ProcessingGraph:
         self.nodes.append(node)
         return node
 
+
     def getSinks(self):
         return [n for n in self.nodes if not n.outputPorts or not any([op.connectedTo for op in n.outputPorts.values()])]
+
 
     def process(self, startNodes=None):
         if not startNodes:
@@ -29,9 +32,17 @@ class ProcessingGraph:
         sequence = self.topologicalSort(startNodes)
 
         logger.info('Start processing (%d / %d node(s), %d sink(s))', len(sequence), len(self.nodes), len(startNodes))
+        wentWell = True
         for n in reversed(sequence):
-            n.process()
-        logger.info('Finished processing')
+            if not n.process():
+                wentWell = False
+                break
+
+        if wentWell:
+            logger.info('Finished processing')
+        else:
+            logger.critical('Processing failed. Aborting.')
+
 
     def topologicalSort(self, startNodesRef):
         startNodes = list(startNodesRef)
@@ -42,7 +53,7 @@ class ProcessingGraph:
         sequence = []
         while startNodes:
             n = startNodes.pop()
-            if not n.upToDate():
+            if not n.isUpToDate():
                 sequence.append(n)
             for pn in pureGraph[n][0]:
                 pureGraph[pn][1].remove(n)
@@ -76,7 +87,7 @@ class ProcessingGraph:
 
             if n.guiNode:
                 pos = n.guiNode.getPosition()
-                ET.SubElement(xmlnode, 'gui', pos_x=str(pos[0]), pos_y=str(pos[1]))
+                ET.SubElement(xmlnode, 'gui', pos_x=str(pos.x), pos_y=str(pos.y))
 
             xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
@@ -101,50 +112,65 @@ class ProcessingGraph:
     def loadFromFile(self, path):
         self.nodes = [] # TODO: check if circular refs slow down deletion
 
-        with open(path, 'r') as f:
-            xmlstr = f.read()
-            root = ET.fromstring(xmlstr)
+        try:
+            with open(path, 'r') as f:
+                try:
+                    xmlstr = f.read()
+                    root = ET.fromstring(xmlstr)
 
-            # map from ID to port object
-            portMap = {}
-            connections = [];
+                    # map from ID to port object
+                    portMap = {}
+                    connections = [];
 
-            # set up nodes
-            for xmlnode in root:
-                procNode = self.createNode(xmlnode.attrib['name'], xmlnode.attrib['type'])
+                    # set up nodes
+                    for xmlnode in root:
+                        procNode = self.createNode(xmlnode.attrib['name'], xmlnode.attrib['type'])
 
-                # delete ports created by process TODO: don't delete, try to match
-                procNode.outputPorts = {}
-                procNode.inputPorts = {}
+                        # delete ports created by process TODO: don't delete, try to match
+                        procNode.outputPorts = {}
+                        procNode.inputPorts = {}
 
-                # get gui node position
-                xmlgui = xmlnode.find('gui')
-                procNode.guiPos = (int(xmlgui.attrib['pos_x']), int(xmlgui.attrib['pos_y']))
+                        # get gui node position
+                        xmlgui = xmlnode.find('gui')
+                        procNode.guiPos = (int(xmlgui.attrib['pos_x']), int(xmlgui.attrib['pos_y']))
 
-                # get ports
-                for po in xmlnode.find('ports'):
-                    if po.tag == 'outport':
-                        pname = po.attrib['name']
-                        procNode.outputPorts[pname] = Port(procNode, pname, 'out')
-                        procNode.outputPorts[pname].id = po.attrib['id']
-                        portMap[po.attrib['id']] = procNode.outputPorts[pname]
-                        for con in po:
-                            connections.append((po.attrib['id'], con.attrib['id']))
+                        # get ports
+                        for po in xmlnode.find('ports'):
+                            if po.tag == 'outport':
+                                pname = po.attrib['name']
+                                procNode.outputPorts[pname] = Port(procNode, pname, 'out')
+                                procNode.outputPorts[pname].id = po.attrib['id']
+                                portMap[po.attrib['id']] = procNode.outputPorts[pname]
+                                for con in po:
+                                    connections.append((po.attrib['id'], con.attrib['id']))
 
-                    elif po.tag == 'inport':
-                        pname = po.attrib['name']
-                        procNode.inputPorts[pname] = Port(procNode, pname, 'in')
-                        procNode.inputPorts[pname].id = po.attrib['id']
-                        portMap[po.attrib['id']] = procNode.inputPorts[pname]
-
-
-                for pa in xmlnode.find('parameters'):
-                    procNode.createParam(pa.attrib['key'], pa.attrib['value'])
+                            elif po.tag == 'inport':
+                                pname = po.attrib['name']
+                                procNode.inputPorts[pname] = Port(procNode, pname, 'in')
+                                procNode.inputPorts[pname].id = po.attrib['id']
+                                portMap[po.attrib['id']] = procNode.inputPorts[pname]
 
 
-            # connect ports
-            for con in connections:
-                ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
+                        paramList = xmlnode.find('parameters')
+                        if paramList:
+                            for pa in paramList:
+                                procNode.createParam(pa.attrib['key'], pa.attrib['value'])
+
+                        procNode.initProcess()
+
+
+                    # connect ports
+                    for con in connections:
+                        ProcessingNode.connectPorts(portMap[con[0]], portMap[con[1]])
+                except ET.ParseError as pe:
+                    logger.critical('An error occured while loading the XML file: %s' % str(pe))
+                    self.nodes = []
+        except IOError as ioe:
+            logger.critical('Error while opening file: %s' % str(ioe))
+
+
+    def __str__(self):
+        return "Number of nodes: %d" % len(self.nodes)
 
 
 ##
@@ -202,6 +228,8 @@ class ProcessingNode:
         self.procType = processType
         if processType == "":
             self.proc = Process(name)
+        elif processType == "dummy":
+            self.proc = DummyProcess(name)
         elif processType == "fileread":
             self.proc = FileReadProcess(name)
         elif processType == "filewrite":
@@ -228,15 +256,21 @@ class ProcessingNode:
         self.guiNode = None
         self.guiPos = (0,0)
 
+    def initProcess(self):
+        self.proc.init()
+
     def getParam(self, key):
         return self.proc.params[key]
 
     def getParams(self):
         return self.proc.getParams()
 
-    def upToDate(self):
-        return all([p.upToDate() for p in self.inputPorts.values()]) \
-                and self.proc.upToDate()
+    def isUpToDate(self):
+        return all([p.isUpToDate() for p in self.inputPorts.values()]) \
+                and self.proc.isUpToDate()
+
+    def isReady(self):
+        pass
 
     def createParam(self, key, value):
         self.proc.params[key] = value;
@@ -261,9 +295,20 @@ class ProcessingNode:
         outFiles = [outPort.fileObj.name if outPort.fileObj else None for outPort in self.outputPorts.values()]
         if all(inFiles) and all(outFiles):
             logger.debug('Executing process "%s"', self.name)
-            self.proc.run(inFiles, outFiles)
+            try:
+                self.proc.run(inFiles, outFiles)
+                return True
+            except Exception as e:
+                logger.error('Error while executing process %s: %s' % (self.name, str(e)))
+                return False
         else:
-            logger.warning('One or more ports are not connected. Node "%s" will not be processed!', self.name)
+            notConnectedPorts = [inPort.name for inPort in self.inputPorts.values() if not inPort.fileObj]\
+                + [outPort.fileObj for outPort in self.outputPorts.values() if not outPort.fileObj]
+
+            logger.error('The following ports of node "%s" are not connected: ' % self.name)
+            for nc in notConnectedPorts:
+                logger.error('\tPort "%s"' % nc)
+            return False
 
     def __str__(self):
         return 'Processing Node "%s", %d input ports, %d output ports' % (self.name, len(self.inputPorts), len(self.outputPorts))
@@ -289,7 +334,7 @@ class Port:
         #if self.fileObj:
         #    os.unlink(self.fileObj)
 
-    def upToDate(self):
+    def isUpToDate(self):
         return False
 
     def __str__(self):
