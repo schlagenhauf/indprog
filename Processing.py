@@ -87,7 +87,7 @@ class ProcessingGraph:
 
             if n.guiNode:
                 pos = n.guiNode.getPosition()
-                ET.SubElement(xmlnode, 'gui', pos_x=str(pos[0]), pos_y=str(pos[1]))
+                ET.SubElement(xmlnode, 'gui', pos_x=str(pos.x), pos_y=str(pos.y))
 
             xmlparams = ET.SubElement(xmlnode, 'parameters')
             for pk, pv in n.getParams().items():
