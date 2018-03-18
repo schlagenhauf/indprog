@@ -233,7 +233,7 @@ class BashProcess(Process):
             return
 
         try:
-            bashProc = subprocess.Popen('bash "%s"' % self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            bashProc = subprocess.Popen('bash %s' % self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             # print stderr lines if there are any
             for errLine in bashProc.stderr:
@@ -248,7 +248,7 @@ class BashProcess(Process):
 
 
     def run(self, inFds, outFds):
-        cmd = 'bash "%s %s;%s"' % (self.params['filename'], ','.join(inFds), ','.join(outFds))
+        cmd = 'bash %s %s\;%s' % (self.params['filename'], ','.join(inFds), ','.join(outFds))
         logger.debug("Bash Cmd: %s" % cmd)
         bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -257,5 +257,4 @@ class BashProcess(Process):
             logger.error(errLine)
 
         for outLine in bashProc.stdout:
-            pass
-            #logger.debug(outLine)
+            logger.debug(outLine)
