@@ -122,6 +122,10 @@ class PrinterProcess(Process):
 
     def run(self, inFds, outFds):
         for  i in inFds:
+            if os.path.getsize(i) <= 0:
+                logger.warning('Printer: File %s is empty.' % i)
+                break
+
             with open(i, 'rb') as oip:
                 logger.info('Printer: Read from input file:')
                 while True:
