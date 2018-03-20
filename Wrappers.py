@@ -234,6 +234,7 @@ class BashProcess(Process):
 
         try:
             bashProc = subprocess.Popen('bash %s' % self.params['filename'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            bashProc.wait() # wait for process to actually end
 
             # print stderr lines if there are any
             for errLine in bashProc.stderr:
@@ -251,6 +252,13 @@ class BashProcess(Process):
         cmd = 'bash %s %s\;%s' % (self.params['filename'], ','.join(inFds), ','.join(outFds))
         logger.debug("Bash Cmd: %s" % cmd)
         bashProc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        bashProc.wait() # wait for process to actually end
+
+        retCode = bashProc.returncode
+        if retCode != 0:
+            logger.error("Bash returned %d" % retCode)
+        else:
+            logger.debug("Bash returned %d" % retCode)
 
         # print stderr lines if there are any
         for errLine in bashProc.stderr:
