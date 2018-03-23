@@ -1,5 +1,17 @@
 #!/bin/bash
 
+bash_process() {
+  echo "Bash in files: $1"
+  echo "Bash out files: $2"
+
+  ls > $2
+
+  return 0
+}
+
+
+#### DO NOT CHANGE THE PART BELOW ####
+
 # when called without arguments (i.e. input / output files),
 # return the port specs
 if [ "$#" -eq 0 ]; then
@@ -12,12 +24,8 @@ elif [ "$#" -eq 1 ]; then
   IFS=';' read -ra IOARGS <<< "$1"
   IFS=',' read -ra INFILES <<< "${IOARGS[0]}"
   IFS=',' read -ra OUTFILES <<< "${IOARGS[1]}"
-  echo "Bash in files: $INFILES"
-  echo "Bash out files: $OUTFILES"
-
-  ls > ${OUTFILES[0]}
-
-  exit 0
+  bash_process "$INFILES" "$OUTFILES"
+  exit $?
 
 # otherwise, print the usage information
 else
