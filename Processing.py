@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import uuid
 import tempfile
 import logging
+import pygraphml
 
 from Wrappers import *
 
@@ -55,7 +56,23 @@ class ProcessingGraph:
         return sequence
 
     def saveToFile(self, path):
-        pass
+        #https://github.com/hadim/pygraphml/blob/master/notebooks/documentation.ipynb
+        g = pygraphml.Graph()
+
+        nodeMap = {}
+        for n in self.nodes:
+            mlNode = g.add_node(n.name)
+            nodeMap[n] = mlNode
+
+        for k,v in nodeMap.items():
+            for inp in k.inputPorts.values():
+                for prePort in inp.connectedTo:
+                    mlPreNode = nodeMap[prePort.ownerNode]
+                    g.add_edge(v, mlPreNode)
+        #g.show()
+        parser = pygraphml.GraphMLParser()
+        parser.write(g, 'graph.xml')
+
 
     def loadFromFile(self, path):
         pass
@@ -137,9 +154,6 @@ class Port:
         self.name = name
         self.direction = direction
         self.connectedTo = set()
-
-    def __del__(self):
-        pass
 
     def upToDate(self):
         return False

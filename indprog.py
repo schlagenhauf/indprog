@@ -26,6 +26,9 @@ class Indprog:
         ProcessingNode.connectPorts(n2.outputPorts['outport'], n3.inputPorts['inport'])
         ProcessingNode.disconnectPorts(n2.outputPorts['outport'], n3.inputPorts['inport'])
 
+        # save graph
+        self.procGraph.saveToFile('dummy')
+
 
     def __quit(self):
         sys.exit(0)
